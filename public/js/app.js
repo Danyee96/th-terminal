@@ -193,7 +193,7 @@ function setLive(on){S.live=on;const b=$("liveBtn");b.className="live "+(on?"on"
   b.title=on?"Pause screen updates":"Resume screen updates";if(on&&pendingRefresh){pendingRefresh=false;refresh()}}
 let sourceExpanded=false;
 function renderSource(){const m=MARKETS[MK],st=STATUS,p=st.provider||{},c=CONN.state,admin=SESSION.role==="superadmin";
-  const label=`<i class="cdot ${c}"></i>${m.label} feed · ${c}`;
+  const label=`<i class="cdot ${c}"></i><span class="feed-name">${m.label} feed</span><span class="feed-state ${c}">${c}</span>`;
   let html=admin?`<button class="lbl feed-status-toggle" data-act="feed-details" aria-expanded="${sourceExpanded}" aria-controls="feedDetails">${label}<span class="feed-chevron" aria-hidden="true">${sourceExpanded?"⌃":"⌄"}</span></button>`:`<div class="lbl">${label}</div>`;
   if(admin){let rows;
     if(MK==="crypto")rows=`<dt>Prices</dt><dd>Binance · ${st.streams?.spot?"streaming":"polling"}</dd><dt>Derivatives</dt><dd>${esc(st.derivatives?.source||"loading")}</dd><dt>Whales</dt><dd>${st.streams?.bybit?"live":"connecting"}</dd>`;
@@ -610,9 +610,28 @@ function applyQuotes(mk,list){const M=MARKETS[mk];for(const q of list){const s=M
   M.lastAt=Date.now();checkAlerts();scheduleRefresh(mk)}
 function applyHistory(mk,{tk,bars}){const s=MARKETS[mk].by[tk];if(!s)return;s.bars=unpack(bars);calc(s);scheduleRefresh(mk)}
 function applyMeta(mk,list){for(const m of list){const s=MARKETS[mk].by[m.tk];if(!s)continue;const{tk,...rest}=m;Object.assign(s,rest);s.capNow=s.shares?s.shares*s.price/1e9:s.capB}scheduleRefresh(mk)}
-function connectWS(){CONN.state=CONN.retry?"reconnecting":"connecting";renderSource();
+let fallbackTimer=null,fallbackBusy=false;
+async function pollLiveSnapshot(){
+  if(fallbackBusy)return;fallbackBusy=true;
+  try{
+    const updates=await Promise.all(Object.keys(MARKETS).map(async mk=>{
+      const data=await getJSON(mk==="crypto"?"/api/crypto/bootstrap":"/api/bootstrap");return {mk,data};
+    }));
+    if(!fallbackTimer)return;
+    for(const {mk,data} of updates){const M=MARKETS[mk];M.status=data.status;if(mk===MK)STATUS=data.status;
+      const quotes=[];
+      for(const item of data.stocks||data.coins){const s=M.by[item.tk];if(!s)continue;const {bars,...meta}=item;Object.assign(s,meta);s.bars=unpack(bars);quotes.push({tk:s.tk,quote:s.quote,bar:s.bars.at(-1)});}
+      applyQuotes(mk,quotes);M.lastAt=data.status.lastQuoteAt||null;
+      if(mk==="crypto"){applyDeriv(data.deriv||[]);M.research=data.research;M.liqSince=data.liqSince;applyWhales(data.whales||[]);}
+    }
+    checkAlerts();CONN.state="polling";renderSource();scheduleRefresh();
+  }catch(e){CONN.state="reconnecting";renderSource();}
+  finally{fallbackBusy=false;}
+}
+function startPollingFallback(){if(fallbackTimer)return;fallbackTimer=setInterval(pollLiveSnapshot,10000);pollLiveSnapshot();}
+function connectWS(){CONN.state=fallbackTimer?CONN.state:CONN.retry?"reconnecting":"connecting";renderSource();
   const ws=new WebSocket(`${location.protocol==="https:"?"wss":"ws"}://${location.host}/ws`);
-  ws.onopen=()=>{CONN.state="connected";CONN.retry=0;renderSource()};
+  ws.onopen=()=>{clearInterval(fallbackTimer);fallbackTimer=null;CONN.state="connected";CONN.retry=0;renderSource()};
   ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch{return}const mk=m.market||"stocks",M=MARKETS[mk];if(!M)return;
     switch(m.type){
       case"quotes":applyQuotes(mk,m.data);break;
@@ -622,7 +641,7 @@ function connectWS(){CONN.state=CONN.retry?"reconnecting":"connecting";renderSou
       case"whales":applyWhales(m.data);break;
       case"research":M.research[m.data.key]=m.data.data;scheduleRefresh(mk);break;
       case"status":M.status=m.data;if(mk===MK)STATUS=m.data;if(m.data.lastQuoteAt)M.lastAt=Math.max(M.lastAt||0,m.data.lastQuoteAt);if(mk===MK){renderSource();marketClock()}break}};
-  ws.onclose=async()=>{const check=await fetch("/api/auth/me").catch(()=>null);if(check&&!check.ok){location.replace("/login.html");return}CONN.state="reconnecting";renderSource();setTimeout(connectWS,Math.min(15000,1000*2**CONN.retry++))}}
+  ws.onclose=async()=>{const check=await fetch("/api/auth/me").catch(()=>null);if(check&&!check.ok){location.replace("/login.html");return}if(!fallbackTimer)CONN.state="reconnecting";renderSource();startPollingFallback();setTimeout(connectWS,Math.min(15000,1000*2**CONN.retry++))}}
 
 /* =====================================================================
    CRYPTO MODULE — derivatives, whales, DeFi & DEX, coin drawer
@@ -916,17 +935,23 @@ if(MARKETS.stocks)seedFeed("stocks");if(MARKETS.crypto)seedFeed("crypto");
 if(MARKETS.crypto)applyDeriv(BOOT.cr.deriv),MARKETS.crypto.whales.forEach(w=>{const s=MARKETS.crypto.by[w.sym];if(s)s.lastWhaleAt=Math.max(s.lastWhaleAt||0,w.ts)});
 renderNav();
 const account = document.createElement("div"); account.className="account-menu";
-const label=document.createElement("span");label.className="mut";label.textContent=SESSION.name+(SESSION.expiresAt&&SESSION.role!=="superadmin"?" · until "+new Date(SESSION.expiresAt).toLocaleDateString():"");account.append(label);
+const profile=document.createElement("div");profile.className="sidebar-profile";
+const avatar=document.createElement("span");avatar.className="sidebar-avatar";avatar.textContent=SESSION.name.trim().slice(0,2).toUpperCase();avatar.setAttribute("aria-hidden","true");
+const identity=document.createElement("div");identity.className="sidebar-identity";
+const label=document.createElement("strong");label.textContent=SESSION.name;identity.append(label);
+const role=document.createElement("span");role.className="sidebar-role";role.textContent=SESSION.role==="superadmin"?"Administrator":SESSION.access==="full"?"Full access":SESSION.access==="stocks"?"Stocks access":"Crypto access";identity.append(role);
+profile.append(avatar,identity);account.append(profile);
+if(SESSION.expiresAt&&SESSION.role!=="superadmin"){const expiry=document.createElement("small");expiry.className="sidebar-expiry";expiry.textContent="Access until "+new Date(SESSION.expiresAt).toLocaleDateString();account.append(expiry);}
 if(SESSION.role==="superadmin"){
-  const role=document.createElement("small");role.className="account-role";role.textContent="SUPERADMIN";account.append(role);
+
   const settings=document.createElement("details");settings.className="account-settings";settings.id="adminSettings";
   settings.open=S.view.startsWith("admin-");
-  const summary=document.createElement("summary");summary.className="account-action";summary.textContent="Settings";settings.append(summary);
+  const summary=document.createElement("summary");summary.className="account-action";summary.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Settings</span>';settings.append(summary);
   const options=document.createElement("div");options.className="account-settings-options";
   for(const [title,anchor] of [["Users","users"],["API settings","api"]]){const a=document.createElement("button");a.dataset.act="view";a.dataset.view="admin-"+anchor;a.id="nav-admin-"+anchor;a.className="account-action";a.textContent=title;options.append(a);}
   settings.append(options);account.append(settings);
 }
-const logout=document.createElement("button");logout.className="account-action logout-action";logout.textContent="Logout";logout.onclick=async()=>{await fetch("/api/auth/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});location.replace("/login.html")};account.append(logout);$("accountMenu").append(account);$("landingLogout").onclick=logout.onclick;
+const logout=document.createElement("button");logout.className="account-action logout-action";logout.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5M9 12h12m-4-4 4 4-4 4"/></svg><span>Logout</span>';logout.onclick=async()=>{await fetch("/api/auth/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});location.replace("/login.html")};account.append(logout);$("accountMenu").append(account);$("landingLogout").onclick=logout.onclick;
 $("tkdl").innerHTML=ASSETS.map(s=>`<option value="${s.tk}">${esc(s.name)}</option>`).join("");
 renderTape();renderBadges();renderCmpBar();renderSource();marketClock();setInterval(()=>{marketClock();renderSource();if(!$("landing").hidden)renderLanding()},5000);
 let rz;new ResizeObserver(()=>{clearTimeout(rz);rz=setTimeout(()=>{if(S.view==="map")renderMap();if(S.view==="chart")drawMain();if(S.drawer)renderDrawer();if(!$("cmpModal").hidden)drawCompare()},60)}).observe(document.body);

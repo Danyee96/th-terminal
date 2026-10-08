@@ -459,3 +459,29 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line2);border-
 @media(max-width:860px){.account-settings{width:auto;position:relative}.account-settings-options{position:absolute;bottom:100%;left:0;min-width:165px;background:var(--card);border:1px solid var(--line2);border-radius:10px;margin:0;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:70}}
 
 .feed-status-toggle{width:100%;text-align:left;cursor:pointer}.feed-status-toggle:hover{color:var(--gold)}.feed-chevron{margin-left:auto;font-size:14px;letter-spacing:0}
+
+.cdot.polling{background:var(--green)}
+
+/* Refined terminal sidebar */
+.side{gap:18px;background:linear-gradient(180deg,#111115 0%,#0b0b0f 65%);border-right:1px solid rgba(255,255,255,.08)}
+.side .brand{padding:6px 5px 3px}.side .brand b{font-size:20px;letter-spacing:.05em}.side .brand small{font-size:9px;letter-spacing:.16em}
+.sidebar-markets{border-color:rgba(255,255,255,.06);background:#17171b;padding:4px;gap:4px;border-radius:10px}
+.sidebar-markets button{font-size:12px;padding:9px 4px;transition:background .15s,color .15s}
+.sidebar-markets button[aria-pressed="true"]{background:linear-gradient(180deg,rgba(245,197,66,.2),rgba(245,197,66,.1));box-shadow:inset 0 0 0 1px rgba(245,197,66,.16)}
+.side .nav{gap:4px}.side .nav button{padding:10px 11px;border-radius:9px;font-size:13px;gap:10px;color:#96969f;transition:background .15s,color .15s}
+.side .nav button svg{width:17px;height:17px;stroke-width:1.7}.side .nav button:hover{background:rgba(255,255,255,.045);color:var(--text)}
+.side .nav button[aria-current="page"]{background:linear-gradient(90deg,rgba(245,197,66,.13),rgba(245,197,66,.04));box-shadow:inset 0 0 0 1px rgba(245,197,66,.09);color:var(--gold)}
+.side .nav button[aria-current="page"]::before{left:0;top:12px;bottom:12px;width:2px;box-shadow:none;border-radius:2px}
+.side .nav button kbd{font-size:9px;padding:2px 5px;background:rgba(255,255,255,.02);border-color:rgba(255,255,255,.06);color:#666670}
+.side .nav .badge{font-size:10px;background:rgba(229,72,77,.16);color:#ff8084;border:1px solid rgba(229,72,77,.2);min-width:20px;text-align:center}
+.side-foot{gap:12px}.account-menu{border-top:1px solid rgba(255,255,255,.07);gap:4px;padding-top:14px}
+.sidebar-profile{display:flex;align-items:center;gap:10px;padding:3px 7px 10px}.sidebar-avatar{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:10px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--gold);background:rgba(245,197,66,.09);border:1px solid rgba(245,197,66,.17)}
+.sidebar-identity{min-width:0}.sidebar-identity strong{display:block;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.sidebar-role{display:block;font-size:10px;color:var(--muted);margin-top:3px}.sidebar-expiry{font-size:10px;padding:0 8px 6px;color:var(--muted)}
+.account-action{display:flex;align-items:center;gap:10px;font-size:12px;padding:9px 11px}.account-action svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.account-settings summary::after{margin-left:auto;font-size:13px}.account-settings-options{margin:2px 0 5px 19px;padding-left:11px}.account-settings-options .account-action{font-size:12px;padding:8px 10px}
+.logout-action{color:#b87c7e}.logout-action:hover{color:#ff898e;background:rgba(229,72,77,.07)}
+.side-foot .feedbox{border-color:rgba(255,255,255,.07);background:rgba(255,255,255,.02);border-radius:10px;padding:11px 10px}
+.feedbox .lbl{gap:6px;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:10px}.feed-name{white-space:nowrap;color:#b0b0b7}.feed-state{margin-left:auto;font-size:9px;color:var(--muted)}.feed-state.connected,.feed-state.polling{color:var(--green)}.feed-state.reconnecting,.feed-state.connecting{color:var(--gold)}.feed-chevron{font-size:12px;margin-left:1px}.feedbox .cdot{width:6px;height:6px;flex:none}.feedbox .srcdl{font-size:10px}
+@media(min-width:861px){.side{overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}.side>.brand,.side>.sidebar-markets,.side>.nav,.side>.side-foot{flex-shrink:0}}
+@media(max-width:860px){.side{gap:4px;background:rgba(11,11,15,.98)}.side .nav button{font-size:10px;padding:7px 5px;gap:4px}.side .nav button[aria-current="page"]::before{display:none}.sidebar-profile{padding:2px 6px;gap:6px}.sidebar-avatar{width:25px;height:25px;border-radius:7px;font-size:9px}.sidebar-role{display:none}.sidebar-identity strong{font-size:10px}.account-menu{padding-top:0;gap:2px}.account-action{font-size:11px;padding:7px 8px}.sidebar-expiry{display:none}}

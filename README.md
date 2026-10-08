@@ -212,3 +212,5 @@ The admin panel supports Nasdaq/simulated stock provider selection, polling inte
 Run `npm test` to verify authentication, market permissions, user management, expiry, session revocation, provider settings and persistence.
 
 When HTTPS is terminated by one trusted reverse proxy, set `TRUST_PROXY=1` so secure session cookies and origin checks use the forwarded protocol. Preserve both `data/auth` and `data/cache` using persistent hosting storage or Docker volumes.
+
+If incoming WebSockets are unavailable on the host, the browser uses authenticated HTTP snapshots every 10 seconds and displays “feed · polling”. WebSocket reconnection continues in the background.
