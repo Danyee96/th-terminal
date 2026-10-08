@@ -1,0 +1,39 @@
+### TH Terminal API — open in VS Code with the "REST Client" extension and click "Send Request"
+@base = http://localhost:3000/api
+
+### Server + data feed status
+GET {{base}}/status
+
+### All stocks with toolkit readings
+GET {{base}}/stocks
+
+### One stock with daily bars and the HCI series
+GET {{base}}/stocks/NVDA
+
+### Screener: HCI too low AND in a buyer zone
+GET {{base}}/screener?signals=os,bz
+
+### Screener: AI stocks with negative HCI, sorted by HCI ascending
+GET {{base}}/screener?group=AI&hciMax=0&sort=hci&dir=asc
+
+### Signal ids you can use in the screener
+GET {{base}}/signals
+
+### ---------------- Crypto ----------------
+### All coins with toolkit readings + derivatives
+GET {{base}}/crypto/coins
+
+### One coin
+GET {{base}}/crypto/coins/BTC
+
+### Coins with negative funding and HCI below zero
+GET {{base}}/crypto/screener?hciMax=0&sort=hci&dir=asc
+
+### Derivatives for every coin
+GET {{base}}/crypto/derivatives
+
+### Whale trades of $1M or more
+GET {{base}}/crypto/whales?kind=trade&minUsd=1000000
+
+### Global market, Fear & Greed, DeFi, stablecoins, DEX, trending
+GET {{base}}/crypto/research

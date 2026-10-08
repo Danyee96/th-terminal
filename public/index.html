@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TH Terminal</title>
+<link rel="icon" href="/img/th-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/css/styles.css">
+
+</head>
+<body>
+<div class="boot" id="boot">
+  <div class="mark" style="width:64px;height:64px;background-size:auto 64px"></div>
+  <b>TH TERMINAL</b>
+  <div class="bootbar"><i id="bootBar"></i></div>
+  <p id="bootMsg">Connecting to the server…</p>
+</div>
+<div class="landing" id="landing" hidden>
+  <div class="land-in">
+    <div class="land-brand"><div class="mark" style="width:52px;height:52px;background-size:auto 52px"></div><div><b>TH TERMINAL</b><small>Simplify technical analysis</small></div></div>
+    <h1 class="land-h">Choose your <em>market</em></h1>
+    <p class="sub" style="margin-inline:auto">The TH Toolkit reads every chart for you: HCI, Hill Zones, divergences and golden zones. You can switch markets any time from the top bar.</p>
+    <div class="land-cards" id="landCards"></div>
+    <p class="disclaimer">Press 1 for stocks or 2 for crypto · Prices from free public sources · Not investment advice</p><button class="btn ghost" id="landingLogout">Logout</button>
+  </div>
+</div>
+<div class="app">
+  <aside class="side">
+    <div class="brand" role="button" tabindex="0" data-act="landing" title="Choose market"><div class="mark" role="img" aria-label="TH"></div><div><b>TH TERMINAL</b><small>STOCKS · CRYPTO</small></div></div>
+    <div id="sidebarMarkets" class="sidebar-markets" hidden role="group" aria-label="Markets"></div>
+    <nav class="nav" id="nav" aria-label="Main"></nav>
+    <div class="side-foot">
+      <div id="accountMenu"></div>
+      <div class="feedbox" id="srcBox"></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <button class="cmdk" data-act="palette" aria-label="Search tickers and commands">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        Search tickers, views, commands<kbd>⌘K</kbd>
+      </button>
+      <div class="seg mkseg" id="mkSwitch" role="group" aria-label="Market"><button data-act="market" data-mk="stocks">Stocks</button><button data-act="market" data-mk="crypto">Crypto</button></div>
+      <div class="sp"></div>
+      <div class="mkt"><span id="mktState"></span><span class="tz" id="mktTime"></span></div>
+      <button class="live on" id="liveBtn" data-act="live" aria-pressed="true"><i></i><span>Live</span></button>
+      <button class="iconbtn" data-act="bell" aria-label="Signal notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="dotn" id="bellN" hidden></span></button>
+      <button class="iconbtn" data-act="settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <button class="iconbtn" data-act="keys" aria-label="Keyboard shortcuts"><span class="mono" style="font-size:14px">?</span></button>
+    </header>
+    <div class="tape"><div class="tape-track" id="tape"></div></div>
+
+    <div class="content" id="content">
+      <!-- OVERVIEW -->
+      <section class="view" id="v-overview" hidden>
+        <div class="head">
+          <div><div class="kicker" id="ovKick">TH Terminal · Market overview</div><h1 id="ovTitle"></h1><p class="sub" id="ovSub"></p></div>
+          <div class="row"><button class="btn" data-act="view" data-view="map">Open heat map</button><button class="btn gold" data-act="view" data-view="screener">Open screener</button></div>
+        </div>
+        <div class="ov" id="ovCrypto" hidden>
+          <div class="card s4"><div class="ct">Global crypto market</div><div id="ocGlobal" style="display:flex;flex-direction:column;gap:12px"></div></div>
+          <div class="card s4"><div class="ct" style="--c:var(--orange)">Fear &amp; Greed index</div><div id="ocFng" style="display:flex;flex-direction:column;gap:8px"></div></div>
+          <div class="card s4"><div class="ct" style="--c:var(--red)">Derivatives pulse</div><div id="ocDeriv" style="display:flex;flex-direction:column;gap:12px"></div></div>
+          <div class="card s7"><div class="ct">Whale radar</div><div id="ocWhales" style="display:flex;flex-direction:column;gap:12px"></div></div>
+          <div class="card s5"><div class="ct" style="--c:var(--green)">DeFi snapshot</div><div id="ocDefi" style="display:flex;flex-direction:column;gap:12px"></div></div>
+        </div>
+        <div class="ov">
+          <div class="card gauge s4"><div class="ct">Market conviction (avg HCI)</div><div id="ovGauge"></div></div>
+          <div class="card s4"><div class="ct" style="--c:var(--green)">Breadth</div><div class="brd" id="ovBreadth"></div></div>
+          <div class="card s4"><div class="ct">Toolkit signals now</div><div class="tiles" id="ovTiles"></div></div>
+          <div class="card s7"><div class="ct"><span id="ovSecT">Sector conviction</span><span class="sp"></span><span class="mono" style="letter-spacing:.06em">avg HCI · 1D</span></div><div class="bars" id="ovSectors"></div></div>
+          <div class="card s5 hist"><div class="ct">HCI distribution<span class="sp"></span><span class="mono" style="letter-spacing:.06em">click a bar to screen</span></div><div id="ovHist"></div></div>
+          <div class="card s8"><div class="ct">Strongest confluence setups</div><div class="lists2" id="ovSetups"></div></div>
+          <div class="card s4"><div class="ct" style="--c:var(--red)">Live signal feed<span class="sp"></span><button data-act="bell">All</button></div><div class="feed" id="ovFeed"></div></div>
+          <div class="card s12"><div class="ct" id="ovMovT">Top movers today</div><div class="lists2" id="ovMovers"></div></div>
+        </div>
+      </section>
+
+      <!-- HEAT MAP -->
+      <section class="view" id="v-map" hidden>
+        <div class="head">
+          <div><div class="kicker">Heat map</div><h1>See the whole market <em>at a glance</em></h1></div>
+          <div class="legend" id="mapLegend"></div>
+        </div>
+        <div class="row">
+          <div class="seg" id="mapMode" role="group" aria-label="Colour by"></div>
+          <div class="seg" id="mapPeriod" role="group" aria-label="Period"></div>
+          <div class="seg" id="mapSize" role="group" aria-label="Tile size"></div>
+          <div class="sp"></div>
+          <div class="crumb" id="mapCrumb"></div>
+        </div>
+        <div class="mapwrap" id="map"></div>
+        <p class="disclaimer">Click a stock for its toolkit readout. Click a sector name to zoom into it. HCI mode: green means too low (buyer territory), red means too high (seller territory).</p>
+      </section>
+
+      <!-- SCREENER -->
+      <section class="view" id="v-screener" hidden>
+        <div class="head">
+          <div><div class="kicker">Screener</div><h1>Every toolkit signal, <em>one table</em></h1><p class="sub" id="scrCount"></p></div>
+          <div class="row"><button class="btn" data-act="csv-copy">Copy CSV</button><button class="btn" data-act="csv-dl">Download CSV</button></div>
+        </div>
+        <div class="row"><span class="disclaimer" style="letter-spacing:.14em">PRESETS</span><div class="chips" id="presets"></div></div>
+        <div class="chips" id="scrGroups"></div>
+        <div class="chips" id="scrSigs"></div>
+        <div class="filters">
+          <label class="fld"><span>Search</span><input id="scrQ" type="search" placeholder="Ticker or company" autocomplete="off"></label>
+          <div class="fld"><span>HCI range <b class="mono gold" id="hrLbl" style="letter-spacing:0"></b></span>
+            <div class="dual"><div class="trk"></div><div class="fill" id="hrFill"></div>
+            <input type="range" id="hrMin" min="-5" max="5" step="0.5" aria-label="Minimum HCI"><input type="range" id="hrMax" min="-5" max="5" step="0.5" aria-label="Maximum HCI"></div></div>
+          <label class="fld"><span>Market cap</span><select id="scrCap"><option value="0">Any size</option><option value="100">Over $100B</option><option value="500">Over $500B</option><option value="1000">Over $1T</option></select></label>
+          <div class="fld"><span>Rows</span><div class="seg" id="densSeg"><button data-d="comfy">Comfy</button><button data-d="dense">Dense</button></div></div>
+        </div>
+        <div class="tablewrap" id="scrWrap"><table><thead><tr id="scrHead"></tr></thead><tbody id="scrBody"></tbody></table></div>
+        <p class="disclaimer">Keys: ↑ ↓ move · Enter details · C chart · W watch · X compare</p>
+      </section>
+
+      <!-- CHART -->
+      <section class="view" id="v-chart" hidden>
+        <div class="ch-grid">
+          <div class="card ch-card" id="chCard">
+            <div class="ch-bar">
+              <button class="ch-sym" data-act="palette" aria-label="Change ticker"><b id="chTk"></b><span><span id="chName"></span><br><span class="mono" id="chPx"></span></span></button>
+              <div class="row" style="gap:4px"><button class="btn sm ghost" data-act="ch-prev" aria-label="Previous ticker">‹</button><button class="btn sm ghost" data-act="ch-next" aria-label="Next ticker">›</button></div>
+              <div class="sp"></div>
+              <div class="seg" id="chTf"></div>
+              <div class="seg" id="chRange"></div>
+              <div class="seg" id="chType"></div>
+              <button class="btn sm" data-act="ch-reset">Reset</button>
+              <button class="btn sm" data-act="ch-full" aria-label="Full screen">⤢</button>
+            </div>
+            <div class="ovl" id="chOv"></div>
+            <div class="readout" id="chRead"></div>
+            <div class="canvasbox"><canvas id="chCv"></canvas><div class="hint">Drag to pan · scroll to zoom · double-click to reset</div></div>
+          </div>
+          <div class="ch-side" style="display:flex;flex-direction:column;gap:16px" id="chSide"></div>
+        </div>
+      </section>
+
+      <!-- DERIVATIVES (crypto) -->
+      <section class="view" id="v-deriv" hidden>
+        <div class="head"><div><div class="kicker">Derivatives</div><h1>Funding, open interest <em>&amp; liquidations</em></h1><p class="sub" id="dvSub"></p></div></div>
+        <div class="stats" id="dvStats"></div>
+        <div class="dv-grid">
+          <div class="card"><div class="ct">Funding rate · every perpetual<span class="sp"></span><span class="mono" style="letter-spacing:.06em">8h rate · APR</span></div><div class="bars" id="dvFund"></div></div>
+          <div class="card"><div class="ct" style="--c:var(--red)">Liquidations</div><div id="dvLiq" style="display:flex;flex-direction:column;gap:10px"></div></div>
+        </div>
+        <div class="tablewrap"><table><thead><tr id="dvHead"></tr></thead><tbody id="dvBody"></tbody></table></div>
+        <p class="disclaimer">Funding is exchanged every 8 hours between longs and shorts. Positive funding means longs pay shorts (crowded longs); negative means shorts pay longs. Open interest and long/short ratios come from Binance futures. Liquidations stream live from Bybit and are counted from when the server started.</p>
+      </section>
+
+      <!-- WHALES (crypto) -->
+      <section class="view" id="v-whales" hidden>
+        <div class="head"><div><div class="kicker">Whale tracker</div><h1>Follow the <em>big money</em></h1><p class="sub">Large exchange trades, liquidations and on-chain Bitcoin moves, live.</p></div></div>
+        <div class="stats" id="whStats"></div>
+        <div class="row"><div class="chips" id="whKinds"></div><div class="sp"></div>
+          <label class="fld" style="flex-direction:row;align-items:center;gap:8px"><span>Min size</span><select id="whMin"><option value="0">Any size</option><option value="500000">$500K+</option><option value="1000000">$1M+</option><option value="5000000">$5M+</option><option value="10000000">$10M+</option></select></label>
+          <label class="fld" style="flex-direction:row;align-items:center;gap:8px"><span>Coin</span><select id="whCoin"></select></label></div>
+        <div class="wh-grid">
+          <div class="card"><div class="ct" style="--c:var(--orange)">Live whale feed</div><div class="whfeed" id="whFeed"></div></div>
+          <div class="card"><div class="ct">Net whale flow by coin<span class="sp"></span><span class="mono" style="letter-spacing:.06em">net · total</span></div><div class="bars" id="whFlow"></div>
+            <div class="ct">How whales are detected</div><p class="disclaimer" id="whHow" style="margin:0;line-height:1.6"></p></div>
+        </div>
+      </section>
+
+      <!-- DEFI & DEX (crypto) -->
+      <section class="view" id="v-defi" hidden>
+        <div class="head"><div><div class="kicker">DeFi &amp; DEX</div><h1>Where the <em>on-chain money</em> sits</h1><p class="sub">Total value locked, stablecoin supply, DEX volume and trending pools, from DeFiLlama, GeckoTerminal and CoinGecko.</p></div></div>
+        <div class="stats" id="dfStats"></div>
+        <div class="df-grid">
+          <div class="card span2"><div class="ct" style="--c:var(--green)">Total value locked · 30 days</div><div id="dfTvl" style="display:flex;flex-direction:column;gap:8px"></div></div>
+          <div class="card"><div class="ct">TVL by chain</div><div id="dfChains"></div></div>
+          <div class="card"><div class="ct">Stablecoin supply</div><div id="dfStables" style="display:flex;flex-direction:column;gap:12px"></div></div>
+          <div class="card"><div class="ct">DEX volume · 24h</div><div id="dfDex" style="display:flex;flex-direction:column;gap:12px"></div></div>
+          <div class="card"><div class="ct" style="--c:var(--orange)">Trending on CoinGecko</div><div id="dfTrend"></div></div>
+          <div class="card span3"><div class="ct" style="--c:var(--red)">Trending DEX pools · GeckoTerminal</div>
+            <div class="tablewrap" style="max-height:none"><table style="min-width:820px"><thead><tr><th>Pool</th><th>Network</th><th class="num">Price</th><th class="num">24h</th><th class="num">Volume 24h</th><th class="num">Liquidity</th><th class="num">Age</th><th></th></tr></thead><tbody id="dfPools"></tbody></table></div>
+            <p class="disclaimer" style="margin:0">Trending pools are often brand new and very high risk. Liquidity can be pulled at any time. Always check the contract before trading.</p></div>
+          <div class="card span3"><div class="ct">Research stack</div><div class="links" id="dfLinks"></div></div>
+        </div>
+      </section>
+
+      <!-- WATCHLISTS -->
+      <section class="view" id="v-watch" hidden>
+        <div class="head"><div><div class="kicker">Watchlists</div><h1>Your lists, <em>read by the toolkit</em></h1></div></div>
+        <div class="two">
+          <div class="card"><div class="ct">Lists</div><div id="wlLists"></div>
+            <form id="wlNew" class="row" style="flex-wrap:nowrap"><input class="inp" id="wlName" placeholder="New list name" maxlength="30" aria-label="New list name"><button class="btn" type="submit">Create</button></form></div>
+          <div class="card">
+            <div class="row"><input class="inp" id="wlRename" style="max-width:260px;font-weight:700" aria-label="List name">
+              <form id="wlAdd" class="row" style="flex-wrap:nowrap"><input class="inp" id="wlAddTk" list="tkdl" placeholder="Add ticker" style="width:140px" aria-label="Add ticker"><button class="btn" type="submit">Add</button></form>
+              <div class="sp"></div><button class="btn ghost sm" id="wlDel" data-act="wl-del">Delete list</button></div>
+            <div class="stats" id="wlStats"></div>
+            <div class="tablewrap" style="max-height:none"><table><thead><tr><th>Ticker</th><th>30D</th><th class="num">Price</th><th class="num">1D</th><th>HCI</th><th>Hill zone</th><th>Divergence</th><th>Golden zone</th><th>Setup</th><th></th></tr></thead><tbody id="wlBody"></tbody></table></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view admin-view" id="v-admin-users" hidden><iframe id="usersFrame" title="User management"></iframe></section>
+      <section class="view admin-view" id="v-admin-api" hidden><iframe id="apiFrame" title="API settings"></iframe></section>
+      <!-- ALERTS -->
+      <section class="view" id="v-alerts" hidden>
+        <div class="head"><div><div class="kicker">Alerts</div><h1>Get told when the <em>toolkit fires</em></h1></div></div>
+        <div class="three">
+          <div class="card"><div class="ct">New alert</div>
+            <form class="form" id="alForm">
+              <label class="fld"><span>Ticker</span><select id="alTk"></select></label>
+              <label class="fld"><span>Condition</span><select id="alType"></select></label>
+              <label class="fld" id="alVWrap"><span>Value</span><input id="alV" type="number" step="any"></label>
+              <label class="fld"><span>Note (optional)</span><input id="alNote" maxlength="80" placeholder="e.g. add to position"></label>
+              <button class="btn gold" type="submit">Create alert</button>
+            </form>
+            <div class="row" style="justify-content:space-between"><label class="switch"><input type="checkbox" id="alSound"><span></span>Sound when an alert fires</label><button class="btn sm ghost" data-act="test-sound">Test</button></div>
+          </div>
+          <div class="card"><div class="ct">Active alerts<span class="sp"></span><span class="mono" id="alCount"></span></div><div id="alList"></div></div>
+          <div class="card"><div class="ct" style="--c:var(--red)">Trigger history<span class="sp"></span><button data-act="clear-hist">Clear</button></div><div class="hist-l" id="alHist"></div></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<datalist id="tkdl"></datalist>
+<div class="tip" id="tip" hidden></div>
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-label="Stock details"></aside>
+<div class="modal pal" id="pal" hidden role="dialog" aria-label="Command palette">
+  <div class="mh"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--gold)"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="palQ" placeholder="Type a ticker, view or command…" autocomplete="off" aria-label="Search"><kbd>Esc</kbd></div>
+  <div class="res" id="palRes"></div>
+  <div class="foot"><span><kbd>↑</kbd> <kbd>↓</kbd> move</span><span><kbd>↵</kbd> details</span><span><kbd>⇧</kbd>+<kbd>↵</kbd> chart</span></div>
+</div>
+<div class="modal" id="setModal" hidden role="dialog" aria-label="Settings"></div>
+<div class="modal" id="keyModal" hidden role="dialog" aria-label="Keyboard shortcuts"></div>
+<div class="modal wide" id="cmpModal" hidden role="dialog" aria-label="Compare"></div>
+<div class="bell" id="bell" hidden></div>
+<div class="cmpbar" id="cmpBar" hidden></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>

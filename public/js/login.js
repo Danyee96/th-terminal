@@ -1,0 +1,4 @@
+const form=document.getElementById('login'),message=document.getElementById('message');
+form.onsubmit=async e=>{e.preventDefault();const button=form.querySelector('button');button.disabled=true;message.textContent='';try{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(form)))});const data=await r.json().catch(()=>{throw new Error("This server does not support login. Open http://localhost:3001/login.html.")});if(!r.ok)throw new Error(data.error);location.replace('/terminal');}catch(e){message.textContent=e.message;}finally{button.disabled=false;}};
+
+document.getElementById("showPassword").addEventListener("change", e => { document.getElementById("password").type = e.target.checked ? "text" : "password"; });
