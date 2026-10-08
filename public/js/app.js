@@ -166,9 +166,9 @@ if(SESSION.role==="superadmin")VIEWS.push(["admin-users","Users"],["admin-api","
 const viewsFor=()=>VIEWS.filter(v=>!v[2]||v[2]===MK);
 function renderAdmin(){const users=S.view==="admin-users",frame=$(users?"usersFrame":"apiFrame");if(!frame.getAttribute("src"))frame.src="/admin.html?embed=1#"+(users?"users":"api");}
 
-function renderNav(){$("nav").innerHTML=viewsFor().filter(v=>!v[0].startsWith("admin-")).map(([id,l],i)=>`<button data-act="view" data-view="${id}" id="nav-${id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">${ICONS[id]}</svg><span>${l}</span>${id==="alerts"?`<span class="badge" id="navAl" hidden></span>`:`<kbd>${i+1}</kbd>`}</button>`).join("");
+function renderNav(){$("nav").innerHTML=viewsFor().filter(v=>!v[0].startsWith("admin-")).map(([id,l],i)=>`<button data-act="view" data-view="${id}" id="nav-${id}" title="${l}" aria-label="${l}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">${ICONS[id]}</svg><span>${l}</span>${id==="alerts"?`<span class="badge" id="navAl" hidden></span>`:`<kbd>${i+1}</kbd>`}</button>`).join("");
   const sideMarkets=$("sidebarMarkets");sideMarkets.hidden=SESSION.role!=="superadmin";
-  if(SESSION.role==="superadmin")sideMarkets.innerHTML=["stocks","crypto"].filter(mk=>MARKETS[mk]).map(mk=>`<button data-act="market" data-mk="${mk}" aria-pressed="${mk===MK&&!S.view.startsWith("admin-")}">${MARKETS[mk].label}</button>`).join("");
+  if(SESSION.role==="superadmin")sideMarkets.innerHTML=["stocks","crypto"].filter(mk=>MARKETS[mk]).map(mk=>`<button data-act="market" data-mk="${mk}" aria-pressed="${mk===MK&&!S.view.startsWith("admin-")}" title="${MARKETS[mk].label}" aria-label="${MARKETS[mk].label}"><span class="market-full">${MARKETS[mk].label}</span><span class="market-short" aria-hidden="true">${mk==="stocks"?"S":"C"}</span></button>`).join("");
   $("mkSwitch").hidden=SESSION.role==="superadmin"||Object.keys(MARKETS).length<2;$("mkSwitch").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mk===MK))}
 function go(v){if(!viewsFor().some(x=>x[0]===v))v="overview";S.view=v;store.set("view",v);if(v.startsWith("admin-")&&$("adminSettings"))$("adminSettings").open=true;$("sidebarMarkets").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mk===MK&&!v.startsWith("admin-")));
   for(const[id]of VIEWS){$("v-"+id).hidden=id!==v;$("nav-"+id)?.setAttribute("aria-current",id===v?"page":"false")}
@@ -191,6 +191,10 @@ function marketClock(){if(MK==="crypto"){const t=new Date(),z=n=>String(n).padSt
   $("mktTime").textContent=`${p.hour}:${p.minute} ET${ses==="open"?"":" · showing last close"}`}
 function setLive(on){S.live=on;const b=$("liveBtn");b.className="live "+(on?"on":"off");b.setAttribute("aria-pressed",on);b.querySelector("span").textContent=on?"Live":"Paused";
   b.title=on?"Pause screen updates":"Resume screen updates";if(on&&pendingRefresh){pendingRefresh=false;refresh()}}
+let sidebarCollapsed=store.get("sidebarCollapsed",false);
+function setSidebarCollapsed(collapsed){sidebarCollapsed=collapsed;document.querySelector(".app").classList.toggle("sidebar-collapsed",collapsed);const b=$("sidebarToggle");b.setAttribute("aria-expanded",!collapsed);b.setAttribute("aria-label",collapsed?"Expand sidebar":"Collapse sidebar");b.title=collapsed?"Expand sidebar":"Collapse sidebar";store.set("sidebarCollapsed",collapsed);}
+$("sidebarToggle").onclick=()=>setSidebarCollapsed(!sidebarCollapsed);
+setSidebarCollapsed(sidebarCollapsed);
 let sourceExpanded=false;
 function renderSource(){const m=MARKETS[MK],st=STATUS,p=st.provider||{},c=CONN.state,admin=SESSION.role==="superadmin";
   const label=`<i class="cdot ${c}"></i><span class="feed-name">${m.label} feed</span><span class="feed-state ${c}">${c}</span>`;
@@ -854,7 +858,7 @@ async function copyCsv(){const t=csv();try{await navigator.clipboard.writeText(t
 document.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if(!el)return;const a=el.dataset.act,tk=el.dataset.tk;
   if(el.closest("#bell")===null&&a!=="bell"&&!$("bell").hidden&&!el.closest("#bell"))$("bell").hidden=true;
   switch(a){
-    case"feed-details":if(SESSION.role==="superadmin"){sourceExpanded=!sourceExpanded;renderSource()}break;
+    case"feed-details":if(SESSION.role==="superadmin"){if(sidebarCollapsed)setSidebarCollapsed(false);sourceExpanded=!sourceExpanded;renderSource()}break;
     case"view":closeAll();go(el.dataset.view);break;
     case"drawer":if(el.dataset.mk&&el.dataset.mk!==MK)switchMarket(el.dataset.mk);if(el.tagName==="TR"&&S.view==="screener")S.scr.sel=tk;closeModalsOnly();openDrawer(tk);break;
     case"enter":enterMarket(el.dataset.mk);break;
@@ -946,12 +950,12 @@ if(SESSION.role==="superadmin"){
 
   const settings=document.createElement("details");settings.className="account-settings";settings.id="adminSettings";
   settings.open=S.view.startsWith("admin-");
-  const summary=document.createElement("summary");summary.className="account-action";summary.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Settings</span>';settings.append(summary);
+  const summary=document.createElement("summary");summary.className="account-action";summary.title="Settings";summary.setAttribute("aria-label","Settings");summary.addEventListener("click",()=>{if(sidebarCollapsed)setSidebarCollapsed(false)});summary.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Settings</span>';settings.append(summary);
   const options=document.createElement("div");options.className="account-settings-options";
   for(const [title,anchor] of [["Users","users"],["API settings","api"]]){const a=document.createElement("button");a.dataset.act="view";a.dataset.view="admin-"+anchor;a.id="nav-admin-"+anchor;a.className="account-action";a.textContent=title;options.append(a);}
   settings.append(options);account.append(settings);
 }
-const logout=document.createElement("button");logout.className="account-action logout-action";logout.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5M9 12h12m-4-4 4 4-4 4"/></svg><span>Logout</span>';logout.onclick=async()=>{await fetch("/api/auth/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});location.replace("/login.html")};account.append(logout);$("accountMenu").append(account);$("landingLogout").onclick=logout.onclick;
+const logout=document.createElement("button");logout.className="account-action logout-action";logout.title="Logout";logout.setAttribute("aria-label","Logout");logout.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5M9 12h12m-4-4 4 4-4 4"/></svg><span>Logout</span>';logout.onclick=async()=>{await fetch("/api/auth/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});location.replace("/login.html")};account.append(logout);$("accountMenu").append(account);$("landingLogout").onclick=logout.onclick;
 $("tkdl").innerHTML=ASSETS.map(s=>`<option value="${s.tk}">${esc(s.name)}</option>`).join("");
 renderTape();renderBadges();renderCmpBar();renderSource();marketClock();setInterval(()=>{marketClock();renderSource();if(!$("landing").hidden)renderLanding()},5000);
 let rz;new ResizeObserver(()=>{clearTimeout(rz);rz=setTimeout(()=>{if(S.view==="map")renderMap();if(S.view==="chart")drawMain();if(S.drawer)renderDrawer();if(!$("cmpModal").hidden)drawCompare()},60)}).observe(document.body);
