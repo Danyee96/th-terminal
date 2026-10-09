@@ -41,7 +41,7 @@ export function createNasdaqProvider() {
         .map((r) => {
           const [m, d, y] = r.date.split("/");
           const c = num(r.close), o = num(r.open), h = num(r.high), l = num(r.low);
-          return { d: `${y}-${m}-${d}`, o: o > 0 ? o : c, h: h > 0 ? h : c, l: l > 0 ? l : c, c, v: num(r.volume) || 0 };
+          return { d: `${y}-${m}-${d}`, o, h, l, c, v: num(r.volume) || 0 };
         })
         .filter((b) => b.c > 0)
         .reverse(); // oldest first
@@ -59,7 +59,7 @@ export function createNasdaqProvider() {
             prevClose: num(r.previousClosePrice),
             open: num(r.openingPrice),
             volume: num(r.volume),
-            ts: Date.parse(r.lastTradeTimestampDateTime) || Date.now(),
+            ts: Date.parse(String(r.lastTradeTimestampDateTime || "").replace(/(\.\d{3})\d+/, "$1")) || null,
             marketStatus: r.marketStatus || null,
           });
         }

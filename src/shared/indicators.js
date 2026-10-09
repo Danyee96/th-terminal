@@ -51,10 +51,10 @@ export function rsi(c, n = 14) {
     const d = c[i] - c[i - 1], up = Math.max(d, 0), dn = Math.max(-d, 0);
     if (i <= n) {
       g += up; l += dn;
-      if (i === n) { g /= n; l /= n; out[i] = 100 - 100 / (1 + g / (l || 1e-9)); }
+      if (i === n) { g /= n; l /= n; out[i] = g===0&&l===0?50:l===0?100:100-100/(1+g/l); }
     } else {
       g = (g * (n - 1) + up) / n; l = (l * (n - 1) + dn) / n;
-      out[i] = 100 - 100 / (1 + g / (l || 1e-9));
+      out[i] = g===0&&l===0?50:l===0?100:100-100/(1+g/l);
     }
   }
   return out;
@@ -100,7 +100,7 @@ export function computeHCI(bars) {
     if (i < 20) return NaN;
     let lo = Infinity, hi = -Infinity;
     for (let j = i - 20; j <= i; j++) { if (bars[j].l < lo) lo = bars[j].l; if (bars[j].h > hi) hi = bars[j].h; }
-    return ((v - lo) / ((hi - lo) || 1)) * 100;
+    return hi===lo?50:((v - lo)/(hi - lo))*100;
   });
   const z = c.map((v, i) => {
     if (i < 49) return NaN;
@@ -160,7 +160,7 @@ export function computeGoldenZone(bars) {
   const top = Math.max(lv(0.5), lv(0.618)), bot = Math.min(lv(0.5), lv(0.618));
   return {
     dir: up ? "bull" : "bear", top, bot, from: Math.min(hiI, loI), hiI, loI,
-    inZone: close >= bot * 0.997 && close <= top * 1.003,
+    inZone: rg>0 && close >= bot * 0.997 && close <= top * 1.003,
     fibs: [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].map((f) => ({ f, p: lv(f) })),
   };
 }
@@ -192,7 +192,8 @@ export function computeStock(s, cfg = DEFAULT_CFG) {
   const b = s.bars, n = b.length, last = b[n - 1].c;
   const ch = (k) => (n > k ? (last / b[n - 1 - k].c - 1) * 100 : 0);
   s.price = last;
-  s.chg = ch(1); s.chgW = ch(5); s.chgM = ch(21); s.chg3M = ch(63);
+  const crypto=s.mk === "crypto" || !!s.pair;
+  s.chg = !crypto&&s.quote?.session==="open"&&s.quote?.prevClose>0?(last/s.quote.prevClose-1)*100:ch(1); s.chgW = ch(crypto?7:5); s.chgM = ch(crypto?30:21); s.chg3M = ch(crypto?90:63);
   s.h = s.hci[n - 1];
   s.capNow = s.shares ? (s.shares * last) / 1e9 : s.capB || 0; // $ billions
   s.above50 = last > s.sma50[n - 1];

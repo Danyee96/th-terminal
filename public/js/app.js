@@ -79,6 +79,7 @@ async function loadBootstrap(){
     catch(e){$("bootMsg").textContent=`Can't reach the TH Terminal server (${e.message}). Retrying…`;await new Promise(res=>setTimeout(res,Math.min(10000,1500*(attempt+1))))}}
 }
 const BOOT=await loadBootstrap();
+if(BOOT.st&&!BOOT.st.stocks.length)BOOT.st=null;if(BOOT.cr&&!BOOT.cr.coins.length)BOOT.cr=null;
 if(!BOOT.st&&!BOOT.cr){$("bootMsg").textContent="Your permitted market is currently unavailable. Contact your administrator.";const back=document.createElement("a");back.href="/login.html";back.className="btn";back.textContent="Back to sign in";$("boot").append(back);throw new Error("No available market");}
 if(BOOT.st)MARKETS.stocks={id:"stocks",label:"Stocks",noun:"stocks",groupWord:"Sector",status:BOOT.st.status,lastAt:null,
   sectors:["Semiconductors","Software","Technology","Communication","Consumer","Financials","Healthcare","Energy","Industrials"],themes:["AI","Fintech","Crypto","Defense","Clean energy","EV"],
@@ -87,7 +88,18 @@ if(BOOT.cr)MARKETS.crypto={id:"crypto",label:"Crypto",noun:"coins",groupWord:"Ca
   sectors:["Layer 1","Layer 2","DeFi","AI","Payments","Exchange","Infrastructure","Meme"],themes:["AI","RWA","DePIN","Perps DEX","DEX","Solana memes","Staking"],
   items:BOOT.cr.coins.map(x=>calc({...x,mk:"crypto",bars:unpack(x.bars)}))};
 for(const m of Object.values(MARKETS))m.by=Object.fromEntries(m.items.map(s=>[s.tk,s]));
-function setMarket(mk){MK=mk;S.mk=mk;const m=MARKETS[mk];ASSETS=m.items;BY=m.by;SECTORS=m.sectors;THEMES=m.themes;STATUS=m.status}
+let macroMarket=null;
+function renderMacroFeed(){if(macroMarket===MK)return;macroMarket=MK;
+  const box=$("macroFeed");box.replaceChildren();
+  const container=document.createElement("div");container.className="tradingview-widget-container";
+  const widget=document.createElement("div");widget.className="tradingview-widget-container__widget";container.append(widget);
+  const credit=document.createElement("div");credit.className="tradingview-widget-copyright";credit.innerHTML='<a href="https://www.tradingview.com/markets/" rel="noopener nofollow" target="_blank">Market data</a><span> by TradingView</span>';container.append(credit);
+  const symbols=[{proName:"CAPITALCOM:DXY",title:"Dollar Index · CFD"}];if(SESSION.markets.includes("crypto"))symbols.push({proName:"CRYPTOCAP:BTC.D",title:"BTC dominance"});
+  const script=document.createElement("script");script.src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";script.async=true;script.textContent=JSON.stringify({symbols,colorTheme:"dark",locale:"en",isTransparent:false,showSymbolLogo:true,displayMode:"regular",largeChartUrl:""});
+  script.onerror=()=>{widget.textContent="Market feed is unavailable. Open TradingView to check the latest readings.";};container.append(script);box.append(container);
+  const note=document.createElement("p");note.className="macro-source-note";note.textContent="Dollar Index: Capital.com CFD quote"+(SESSION.markets.includes("crypto")?" · BTC dominance: TradingView market-cap index":"")+". Quotes update automatically when the source publishes data.";box.append(note);
+}
+function setMarket(mk){MK=mk;S.mk=mk;const m=MARKETS[mk];ASSETS=m.items;BY=m.by;SECTORS=m.sectors;THEMES=m.themes;STATUS=m.status;renderMacroFeed()}
 setMarket(MARKETS[store.get("market","stocks")]?store.get("market","stocks"):Object.keys(MARKETS)[0]);
 const recomputeAll=()=>Object.values(MARKETS).forEach(m=>m.items.forEach(calc));
 
@@ -163,6 +175,7 @@ const ICONS={
 };
 const VIEWS=[["overview","Overview"],["map","Heat Map"],["screener","Screener"],["chart","Chart"],["deriv","Derivatives","crypto"],["whales","Whales","crypto"],["defi","DeFi & DEX","crypto"],["watch","Watchlists"],["alerts","Alerts"]];
 if(SESSION.role==="superadmin")VIEWS.push(["admin-users","Users"],["admin-api","API settings"]);
+const viewHistory=[];
 const viewsFor=()=>VIEWS.filter(v=>!v[2]||v[2]===MK);
 function renderAdmin(){const users=S.view==="admin-users",frame=$(users?"usersFrame":"apiFrame");if(!frame.getAttribute("src"))frame.src="/admin.html?embed=1#"+(users?"users":"api");}
 
@@ -170,7 +183,7 @@ function renderNav(){$("nav").innerHTML=viewsFor().filter(v=>!v[0].startsWith("a
   const sideMarkets=$("sidebarMarkets");sideMarkets.hidden=SESSION.role!=="superadmin";
   if(SESSION.role==="superadmin")sideMarkets.innerHTML=["stocks","crypto"].filter(mk=>MARKETS[mk]).map(mk=>`<button data-act="market" data-mk="${mk}" aria-pressed="${mk===MK&&!S.view.startsWith("admin-")}" title="${MARKETS[mk].label}" aria-label="${MARKETS[mk].label}"><span class="market-full">${MARKETS[mk].label}</span><span class="market-short" aria-hidden="true">${mk==="stocks"?"S":"C"}</span></button>`).join("");
   $("mkSwitch").hidden=SESSION.role==="superadmin"||Object.keys(MARKETS).length<2;$("mkSwitch").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mk===MK))}
-function go(v){if(!viewsFor().some(x=>x[0]===v))v="overview";S.view=v;store.set("view",v);if(v.startsWith("admin-")&&$("adminSettings"))$("adminSettings").open=true;$("sidebarMarkets").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mk===MK&&!v.startsWith("admin-")));
+function go(v,record=true){if(!viewsFor().some(x=>x[0]===v))v="overview";if(record&&S.view!==v)viewHistory.push(S.view);S.view=v;store.set("view",v);if(v.startsWith("admin-")&&$("adminSettings"))$("adminSettings").open=true;$("sidebarMarkets").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mk===MK&&!v.startsWith("admin-")));
   for(const[id]of VIEWS){$("v-"+id).hidden=id!==v;$("nav-"+id)?.setAttribute("aria-current",id===v?"page":"false")}
   try{history.replaceState(null,"","#"+v)}catch{}
   $("content").scrollTop=0;hideTip();enter(v)}
@@ -195,14 +208,23 @@ let sidebarCollapsed=store.get("sidebarCollapsed",false);
 function setSidebarCollapsed(collapsed){sidebarCollapsed=collapsed;document.querySelector(".app").classList.toggle("sidebar-collapsed",collapsed);const b=$("sidebarToggle");b.setAttribute("aria-expanded",!collapsed);b.setAttribute("aria-label",collapsed?"Expand sidebar":"Collapse sidebar");b.title=collapsed?"Expand sidebar":"Collapse sidebar";store.set("sidebarCollapsed",collapsed);}
 $("sidebarToggle").onclick=()=>setSidebarCollapsed(!sidebarCollapsed);
 setSidebarCollapsed(sidebarCollapsed);
+function renderDataQuality(){
+  const stale=ASSETS.filter(s=>s.historyStale).length,unavailable=STATUS.unavailable?.length||0;
+  const lastTrade=Math.max(0,...ASSETS.map(s=>s.quote?.ts||0));
+  const age=lastTrade?Date.now()-lastTrade:Infinity;
+  const closed=MK==="stocks"&&STATUS.session!=="open";
+  let state=closed?"Session closed · last regular close":age>120000?(lastTrade?"Quotes delayed/stale · last trade "+ago(lastTrade):"Awaiting timestamped market quotes"):"Market quotes updating · last trade "+ago(lastTrade);
+  if(STATUS.quoteError)state="Quote provider unavailable";
+  $("dataQuality").innerHTML=`<span class="${(!closed&&age>120000)||STATUS.quoteError?"dn":"mut"}">${state}${stale?` · ${stale} cached histories`:""}${unavailable?` · ${unavailable} instruments unavailable`:""}</span><span class="mut" title="The original TH Toolkit formulas have not been provided or validated.">TH indicators: prototype formulas</span>`;
+}
 let sourceExpanded=false;
-function renderSource(){const m=MARKETS[MK],st=STATUS,p=st.provider||{},c=CONN.state,admin=SESSION.role==="superadmin";
+function renderSource(){const m=MARKETS[MK],st=STATUS,p=st.provider||{},c=CONN.state,admin=SESSION.role==="superadmin";renderDataQuality();
   const label=`<i class="cdot ${c}"></i><span class="feed-name">${m.label} feed</span><span class="feed-state ${c}">${c}</span>`;
   let html=admin?`<button class="lbl feed-status-toggle" data-act="feed-details" aria-expanded="${sourceExpanded}" aria-controls="feedDetails">${label}<span class="feed-chevron" aria-hidden="true">${sourceExpanded?"⌃":"⌄"}</span></button>`:`<div class="lbl">${label}</div>`;
   if(admin){let rows;
     if(MK==="crypto")rows=`<dt>Prices</dt><dd>Binance · ${st.streams?.spot?"streaming":"polling"}</dd><dt>Derivatives</dt><dd>${esc(st.derivatives?.source||"loading")}</dd><dt>Whales</dt><dd>${st.streams?.bybit?"live":"connecting"}</dd>`;
-    else{const fh=st.finnhub||{};rows=`<dt>Source</dt><dd>${esc(p.label||"—")}</dd><dt>Updates</dt><dd>${p.mode==="simulated"?"Simulated prices":fh.connected?"Streaming trades":`Polled every ${Math.round((st.pollMs||15000)/1000)}s`}</dd><dt>Real-time</dt><dd>${fh.enabled?(fh.connected?`Finnhub · ${fh.symbols}`:"Finnhub connecting"):"Off"}</dd>`;}
-    html+=`<dl class="srcdl" id="feedDetails" ${sourceExpanded?"":"hidden"}>${rows}<dt>Last price</dt><dd>${m.lastAt?ago(m.lastAt):"waiting"}</dd>${st.fallbacks?.length?`<dt>Simulated</dt><dd class="dn">${st.fallbacks.length} stocks</dd>`:""}</dl>`;
+    else{const fh=st.finnhub||{};rows=`<dt>Source</dt><dd>${esc(p.label||"—")}</dd><dt>Updates</dt><dd>${fh.connected?"Streaming trades":`Polled every ${Math.round((st.pollMs||15000)/1000)}s`}</dd><dt>Real-time</dt><dd>${fh.enabled?(fh.connected?`Finnhub · ${fh.symbols}`:"Finnhub connecting"):"Off"}</dd>`;}
+    html+=`<dl class="srcdl" id="feedDetails" ${sourceExpanded?"":"hidden"}>${rows}<dt>Last price</dt><dd>${m.lastAt?ago(m.lastAt):"waiting"}</dd>${st.unavailable?.length?`<dt>Unavailable</dt><dd class="dn">${st.unavailable.length} instruments</dd>`:""}</dl>`;
   }
   const focused=$("srcBox").contains(document.activeElement);$("srcBox").innerHTML=html;if(focused)$("srcBox").querySelector("button")?.focus({preventScroll:true});
 }
@@ -239,7 +261,7 @@ function renderOverview(){const M=MARKETS[MK];
   $("ovTiles").innerHTML=["os","ob","bz","sz","bd","gz"].map(id=>{const x=SIG[id],m=ASSETS.filter(x.t).sort((a,b)=>b.capNow-a.capNow);
     return`<button class="tile2" style="--c:${x.c}" data-act="sig" data-sig="${id}"><b>${m.length}</b><span>${x.l()}</span><small>${m.slice(0,4).map(s=>s.tk).join(" · ")||"none right now"}</small></button>`}).join("");
   // sectors
-  const sec=SECTORS.map(n=>{const m=ASSETS.filter(s=>s.sector===n);return{n,h:m.reduce((a,s)=>a+s.h,0)/m.length,c:m.reduce((a,s)=>a+s.chg,0)/m.length}}).sort((a,b)=>a.h-b.h);
+  const sec=SECTORS.map(n=>{const m=ASSETS.filter(s=>s.sector===n);return{n,h:m.length?m.reduce((a,s)=>a+s.h,0)/m.length:0,c:m.length?m.reduce((a,s)=>a+s.chg,0)/m.length:0}}).sort((a,b)=>a.h-b.h);
   $("ovSectors").innerHTML=sec.map(x=>{const w=Math.abs(x.h)/5*50;return`<button class="sbar" data-act="group" data-g="${x.n}"><span>${x.n}</span><span class="trk"><b style="${x.h<0?`right:50%`:`left:50%`};width:${w}%;background:${hciHue(x.h)};box-shadow:0 0 10px ${rgba(x.h<0?HEX.green:HEX.red,.35)}"></b></span><span class="mono" style="color:${hciHue(x.h)};text-align:right">${fmtH(x.h)}</span><span class="mono c4 ${pc(x.c)}" style="text-align:right">${fmtPct(x.c)}</span></button>`}).join("");
   // histogram
   const bins=[...Array(10)].map((_,i)=>({a:i-5,b:i-4,n:0}));ASSETS.forEach(s=>bins[clamp(Math.floor(s.h+5),0,9)].n++);
@@ -286,7 +308,7 @@ function renderMap(){
     const st=s.setup;return st.side==="flat"?HEX.card3:mix(HEX.card3,st.side==="bull"?HEX.green:HEX.red,st.score/5)};
   const val=s=>M.mode==="fund"?fmtFund(s.deriv?.funding):M.mode==="chg"?fmtPct(per(s)):M.mode==="hci"?fmtH(s.h):M.mode==="zone"?(s.zone.status==="neutral"?"neutral":s.zone.status):(s.setup.side==="flat"?"flat":`${s.setup.side} ${s.setup.score}/5`);
   const secs=M.focus?[M.focus]:SECTORS;
-  const root=d3.hierarchy({children:secs.map(n=>({name:n,children:ASSETS.filter(s=>s.sector===n).map(s=>({s}))}))}).sum(d=>d.s?(M.size==="eq"?1:Math.pow(d.s.capNow,.68)):0).sort((a,b)=>b.value-a.value);
+  const root=d3.hierarchy({children:secs.map(n=>({name:n,children:ASSETS.filter(s=>s.sector===n).map(s=>({s}))}))}).sum(d=>d.s?(M.size==="eq"?1:Math.pow(d.Math.max(s.capNow,1),.68)):0).sort((a,b)=>b.value-a.value);
   d3.treemap().size([W,H]).paddingOuter(3).paddingTop(22).paddingInner(2).tile(d3.treemapSquarify.ratio(1.15))(root);
   let html="";
   for(const sc of root.children){html+=`<button class="sec" data-act="map-focus" data-v="${M.focus?"":sc.data.name}" style="left:${sc.x0}px;top:${sc.y0+2}px;width:${sc.x1-sc.x0}px">${sc.data.name}${M.focus?"":" ›"}</button>`;
@@ -307,7 +329,7 @@ $("map").addEventListener("mouseleave",hideTip);
 
 /* ---------- screener ---------- */
 const COLS=[
-  {k:"tk",l:"Ticker",r:s=>`<div class="tkc"><span class="tk">${s.tk}${s.source==="simulated"?` <span class="pill" title="Real data unavailable, showing simulated prices">SIM</span>`:""}</span><span class="nm">${esc(s.name)}</span></div>`},
+  {k:"tk",l:"Ticker",r:s=>`<div class="tkc"><span class="tk">${s.tk}</span><span class="nm">${esc(s.name)}</span></div>`},
   {k:"chgM",l:"30D trend",r:s=>spark(s.spark)},
   {k:"price",l:"Price",n:1,r:s=>fmtP(s.price),cls:"mono price"},
   {k:"chg",l:"1D",n:1,r:s=>`<span class="${pc(s.chg)}">${fmtPct(s.chg)}</span>`,cls:"mono"},
@@ -365,7 +387,7 @@ $("scrCap").addEventListener("change",e=>{S.scr.cap=+e.target.value;enterScreene
 $("densSeg").addEventListener("click",e=>{const b=e.target.closest("[data-d]");if(!b)return;CFG.density=b.dataset.d;store.set("cfg",CFG);enterScreener()});
 function moveSel(d){const L=S.scr.list;if(!L.length)return;let i=L.indexOf(S.scr.sel);i=clamp(i<0?0:i+d,0,L.length-1);S.scr.sel=L[i];renderRows();$("r-"+CSS.escape(L[i]))?.scrollIntoView({block:"nearest"})}
 function csv(){const rows=filtered();const head=["Ticker","Company","Sector","Price","Chg1D%","Chg1W%","MktCapB","HCI","HillZone","Divergence","GoldenZone","BullScore","BearScore"];
-  return[head.join(","),...rows.map(s=>[s.tk,`"${s.name}"`,s.sector,fmtP(s.price).replace(/,/g,""),s.chg.toFixed(2),s.chgW.toFixed(2),s.capNow.toFixed(0),s.h.toFixed(2),s.zone.status,s.div?.type||"",s.golden.inZone?"yes":"",s.setup.bull,s.setup.bear].join(","))].join("\n")}
+  return[head.join(","),...rows.map(s=>[s.tk,`"${s.name}"`,s.sector,fmtP(s.price).replace(/,/g,""),s.chg.toFixed(2),s.chgW.toFixed(2),s.capNow>0?s.capNow.toFixed(0):"",s.h.toFixed(2),s.zone.status,s.div?.type||"",s.golden.inZone?"yes":"",s.setup.bull,s.setup.bear].join(","))].join("\n")}
 
 /* ---------- chart ---------- */
 const chCv=$("chCv");let chInfo=null;
@@ -374,7 +396,7 @@ const RANGES={D:[["3M",63],["6M",126],["1Y",252],["2Y",504]],W:[["6M",26],["1Y",
 function resetView(cnt){const src=chartSrc(),n=src.bars.length;cnt=cnt||(S.chart.tf==="W"?52:126);S.chart.v={count:Math.min(cnt,n),end:n+3}}
 function enterChart(){const C=S.chart;if(!BY[C.tk])C.tk=ASSETS[0].tk;if(!C.v)resetView();
   $("chTf").innerHTML=[["D","Daily"],["W","Weekly"]].map(([k,l])=>`<button data-act="ch-tf" data-v="${k}" aria-pressed="${C.tf===k}">${l}</button>`).join("");
-  $("chRange").innerHTML=RANGES[C.tf].map(([l,n])=>`<button data-act="ch-range" data-v="${n}" aria-pressed="${Math.round(C.v.count)===n}">${l}</button>`).join("");
+  $("chRange").innerHTML=(C.tf==="D"&&MK==="crypto"?[["3M",90],["6M",180],["1Y",365],["2Y",730]]:RANGES[C.tf]).map(([l,n])=>`<button data-act="ch-range" data-v="${n}" aria-pressed="${Math.round(C.v.count)===n}">${l}</button>`).join("");
   $("chType").innerHTML=[["candle","Candles"],["line","Line"]].map(([k,l])=>`<button data-act="ch-type" data-v="${k}" aria-pressed="${C.type===k}">${l}</button>`).join("");
   const OV=[["zones","Hill Zones",HEX.green],["golden","Golden Zone",HEX.gold],["heat","HCI Heatmap",HEX.orange],["div","Divergence",HEX.red],["fib","Fib levels",HEX.gold2],["sma20","SMA 20","#7aa7ff"],["sma50","SMA 50","#b58cff"]];
   $("chOv").innerHTML=OV.map(([k,l,c])=>`<button class="chip" style="--c:${c}" data-act="ch-ov" data-v="${k}" aria-pressed="${C.ov[k]}"><i></i>${l}</button>`).join("");
@@ -490,8 +512,8 @@ function stepTicker(d){const L=S.scr.list.length?S.scr.list:ASSETS.map(s=>s.tk);
 function openChart(tk){S.chart.tk=tk;resetView(S.chart.v?.count);closeDrawer();go("chart")}
 
 /* ---------- drawer ---------- */
-function openDrawer(tk){S.drawer=tk;S.scr.sel=tk;$("scrim").hidden=false;$("drawer").classList.add("open");renderDrawer();if(S.view==="screener")renderRows();setTimeout(()=>$("drawer").querySelector("[data-act=close-drawer]")?.focus(),50)}
-function closeDrawer(){if(!S.drawer)return;S.drawer=null;$("drawer").classList.remove("open");$("scrim").hidden=true}
+function openDrawer(tk){$("drawer").inert=false;$("drawer").setAttribute("aria-hidden","false");S.drawer=tk;S.scr.sel=tk;$("scrim").hidden=false;$("drawer").classList.add("open");renderDrawer();if(S.view==="screener")renderRows();setTimeout(()=>$("drawer").querySelector("[data-act=close-drawer]")?.focus(),50)}
+function closeDrawer(){if(!S.drawer)return;S.drawer=null;$("drawer").inert=true;$("drawer").setAttribute("aria-hidden","true");$("drawer").classList.remove("open");$("scrim").hidden=true}
 function renderDrawer(){const s=BY[S.drawer];if(!s)return;const z=s.zone,g=s.golden,st=s.setup,wl=activeList(),inW=wl?.tks.includes(s.tk);
   const ck=(ok,t)=>`<div><i class="${ok?"up":"mut"}">${ok?"✓":"·"}</i><span class="${ok?"":"mut"}">${t}</span></div>`;
   const side=st.side==="bear"?"bear":"bull";
@@ -499,6 +521,8 @@ function renderDrawer(){const s=BY[S.drawer];if(!s)return;const z=s.zone,g=s.gol
   $("drawer").innerHTML=`<div class="dh"><div style="flex:1;min-width:0"><div class="kicker">${s.sector}${s.themes.length?" · "+s.themes.join(" · "):""}</div>
       <div class="row" style="align-items:baseline;margin-top:6px"><span class="big">${s.tk}</span><span class="mono" style="font-size:20px">${fmtP(s.price)}</span><span class="mono ${pc(s.chg)}">${fmtPct(s.chg)}</span></div>
       <div class="mut">${esc(s.name)}${s.rank?` · #${s.rank}`:""} · ${fmtCap(s.capNow)}</div></div>
+      <button class="iconbtn" data-act="back" aria-label="Back" title="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14 6-6 6 6 6"/></svg></button>
+      <button class="iconbtn" data-act="home" aria-label="Home dashboard" title="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 11 9-8 9 8M5 10v10h14V10M10 20v-7h4v7"/></svg></button>
       <button class="iconbtn" data-act="close-drawer" aria-label="Close">✕</button></div>
     <div class="db">
       <div class="row"><button class="btn gold" data-act="chart" data-tk="${s.tk}">Open full chart + toolkit</button><button class="btn" data-act="watch" data-tk="${s.tk}">${inW?"★ Watching":"☆ Watch"}</button><button class="btn" data-act="alert" data-tk="${s.tk}">Set alert</button><button class="btn" data-act="cmp" data-tk="${s.tk}">${S.cmp.has(s.tk)?"✓ Comparing":"+ Compare"}</button></div>
@@ -581,7 +605,7 @@ function renderAlertLists(){$("alCount").textContent=`${S.alerts.filter(a=>a.on)
   $("alHist").innerHTML=S.hist.length?S.hist.slice(0,80).map(h=>`<div><span class="mono mut">${new Date(h.t).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})}</span><span><button class="tkb" data-act="drawer" data-tk="${h.tk}" data-mk="${h.mk||"stocks"}" style="color:var(--gold)">${h.tk}</button> ${esc(h.text)}</span></div>`).join("")
     :`<p class="mut">Fired alerts will be logged here with the time they triggered.</p>`}
 $("alList").addEventListener("change",e=>{const id=e.target.dataset.alOn;if(!id)return;const a=S.alerts.find(x=>x.id==id);a.on=e.target.checked;a.armed=true;saveAlerts();renderAlertLists()});
-function checkAlerts(){let ch=false;for(const a of S.alerts){const mk=a.mk||"stocks",s=MARKETS[mk]?.by[a.tk];if(!s||!a.on||!AT[a.type])continue;const hit=AT[a.type].t(s,a.v);
+function checkAlerts(){let ch=false;for(const a of S.alerts){const mk=a.mk||"stocks",s=MARKETS[mk]?.by[a.tk];if(!s||s.historyStale||!s.quote?.ts||Date.now()-s.quote.ts>120000||!a.on||!AT[a.type])continue;const hit=AT[a.type].t(s,a.v);
   if(hit&&a.armed){a.armed=false;a.fired=Date.now();a.seen=S.view==="alerts";ch=true;const txt=`${AT[a.type].l(a.v)} · ${fmtP(s.price)}`;S.hist.unshift({t:Date.now(),tk:a.tk,mk,text:txt});
     toast(`🔔 ${a.tk} alert`,txt+(a.note?` · ${a.note}`:""),{l:"View",act:()=>{if(mk!==MK)switchMarket(mk);openDrawer(a.tk)}},HEX.gold);beep()}
   else if(!hit&&!a.armed){a.armed=true;ch=true}}
@@ -612,7 +636,7 @@ function applyQuotes(mk,list){const M=MARKETS[mk];for(const q of list){const s=M
     if(q.bar){const L=s.bars[s.bars.length-1];if(L.d===q.bar.d)Object.assign(L,q.bar);else if(q.bar.d>L.d)s.bars.push({...q.bar})}
     calc(s);diffEvents(s,prev)}
   M.lastAt=Date.now();checkAlerts();scheduleRefresh(mk)}
-function applyHistory(mk,{tk,bars}){const s=MARKETS[mk].by[tk];if(!s)return;s.bars=unpack(bars);calc(s);scheduleRefresh(mk)}
+function applyHistory(mk,{tk,bars}){const s=MARKETS[mk].by[tk];if(!s){location.reload();return;}s.bars=unpack(bars);calc(s);scheduleRefresh(mk)}
 function applyMeta(mk,list){for(const m of list){const s=MARKETS[mk].by[m.tk];if(!s)continue;const{tk,...rest}=m;Object.assign(s,rest);s.capNow=s.shares?s.shares*s.price/1e9:s.capB}scheduleRefresh(mk)}
 let fallbackTimer=null,fallbackBusy=false;
 async function pollLiveSnapshot(){
@@ -624,7 +648,7 @@ async function pollLiveSnapshot(){
     if(!fallbackTimer)return;
     for(const {mk,data} of updates){const M=MARKETS[mk];M.status=data.status;if(mk===MK)STATUS=data.status;
       const quotes=[];
-      for(const item of data.stocks||data.coins){const s=M.by[item.tk];if(!s)continue;const {bars,...meta}=item;Object.assign(s,meta);s.bars=unpack(bars);quotes.push({tk:s.tk,quote:s.quote,bar:s.bars.at(-1)});}
+      for(const item of data.stocks||data.coins){const s=M.by[item.tk];if(!s){location.reload();return;}const {bars,...meta}=item;Object.assign(s,meta);s.bars=unpack(bars);quotes.push({tk:s.tk,quote:s.quote,bar:s.bars.at(-1)});}
       applyQuotes(mk,quotes);M.lastAt=data.status.lastQuoteAt||null;
       if(mk==="crypto"){applyDeriv(data.deriv||[]);M.research=data.research;M.liqSince=data.liqSince;applyWhales(data.whales||[]);}
     }
@@ -800,7 +824,7 @@ function renderLanding(force){if(!force&&Date.now()-landingAt<2000)return;landin
       setText(tk,s.tk);setHTML(sp,spark(s.spark,90,22));setText(px,fmtP(s.price));setText(ch,fmtPct(s.chg));setAttr(ch,"class",`mono ${pc(s.chg)}`)})}}
 function showLanding(){if(SESSION.role==="superadmin"||SESSION.markets.length===1){go("overview");return}closeAll();renderLanding(true);$("landing").hidden=false;setTimeout(()=>$("landCards").querySelector(".mcard")?.focus({preventScroll:true}),50)}
 function enterMarket(mk){$("landing").hidden=true;switchMarket(mk,"overview")}
-function switchMarket(mk,view){if(!MARKETS[mk])return;if(mk!==MK)closeAll();setMarket(mk);store.set("market",mk);
+function switchMarket(mk,view){if(!MARKETS[mk])return;if(mk!==MK){closeAll();viewHistory.length=0;}setMarket(mk);store.set("market",mk);
   renderNav();renderTape();renderBadges();renderSource();marketClock();renderCmpBar();
   $("tkdl").innerHTML=ASSETS.map(s=>`<option value="${s.tk}">${esc(s.name)}</option>`).join("");$("whCoin").innerHTML="";
   const vs=viewsFor();go(view&&vs.some(v=>v[0]===view)?view:vs.some(v=>v[0]===S.view)?S.view:"overview")}
@@ -859,6 +883,8 @@ document.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if
   if(el.closest("#bell")===null&&a!=="bell"&&!$("bell").hidden&&!el.closest("#bell"))$("bell").hidden=true;
   switch(a){
     case"feed-details":if(SESSION.role==="superadmin"){if(sidebarCollapsed)setSidebarCollapsed(false);sourceExpanded=!sourceExpanded;renderSource()}break;
+    case"home":closeAll();viewHistory.length=0;if(SESSION.role!=="superadmin"&&SESSION.markets.length>1){showLanding();break}$("landing").hidden=true;go("overview",false);break;
+    case"back":if(S.drawer||!$("pal").hidden||!$("setModal").hidden||!$("keyModal").hidden||!$("cmpModal").hidden){closeAll();break}$("landing").hidden=true;go(viewHistory.pop()||"overview",false);break;
     case"view":closeAll();go(el.dataset.view);break;
     case"drawer":if(el.dataset.mk&&el.dataset.mk!==MK)switchMarket(el.dataset.mk);if(el.tagName==="TR"&&S.view==="screener")S.scr.sel=tk;closeModalsOnly();openDrawer(tk);break;
     case"enter":enterMarket(el.dataset.mk);break;

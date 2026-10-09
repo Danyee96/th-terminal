@@ -11,6 +11,7 @@
  *
  * Emits: "quotes", "history", "meta", "deriv", "whales", "research".
  */
+import { validBars } from "../lib/bars.js";
 import { EventEmitter } from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -26,7 +27,7 @@ import * as research from "../providers/crypto/research.js";
 
 const utcToday = () => new Date().toISOString().slice(0, 10);
 const DAY = 24 * 3600_000;
-const r4 = (v) => (Number.isFinite(v) ? Math.round(v * 1e6) / 1e6 : v);
+const r4 = (v) => (Number.isFinite(v) ? Math.round(v * 1e12) / 1e12 : v);
 
 export class CryptoMarket extends EventEmitter {
   constructor({ config, log }) {
@@ -116,18 +117,22 @@ export class CryptoMarket extends EventEmitter {
 
   async loadHistory(c) {
     const file = path.join(this.config.cacheDir, `crypto_${c.tk}.json`);
+    let cached=null;
     try {
       const j = JSON.parse(await fs.readFile(file, "utf8"));
-      if (Date.now() - j.fetchedAt < 60 * 60_000 && j.bars?.length > 60) { c.bars = j.bars; return true; }
+      j.bars=validBars(j.bars);
+      if(j.bars.length>60)cached=j;
+      if (Date.now() - j.fetchedAt < 60 * 60_000 && j.bars?.length > 60) { c.bars = j.bars;c.historyStale=false;c.histAt=j.fetchedAt; return true; }
     } catch { /* no cache */ }
     try {
-      const bars = await binance.dailyCandles(c.pair, 730);
+      const bars = validBars(await binance.dailyCandles(c.pair, 730));
       if (bars.length < 60) throw new Error(`only ${bars.length} candles`);
-      c.bars = bars;
+      c.bars = bars;c.historyStale=false;c.histAt=Date.now();
       await fs.writeFile(file, JSON.stringify({ fetchedAt: Date.now(), bars }));
       return true;
     } catch (e) {
       this.log.warn(`Crypto history failed for ${c.tk}: ${e.message}`);
+      if(cached){c.bars=cached.bars;c.historyStale=true;c.histAt=cached.fetchedAt;return true;}
       return false;
     }
   }
@@ -140,6 +145,7 @@ export class CryptoMarket extends EventEmitter {
         const i = c.bars.findIndex((x) => x.d === b.d);
         if (i >= 0) c.bars[i] = b; else if (b.d > c.bars.at(-1).d) c.bars.push(b);
       }
+      this.version++;
       this.emit("history", { tk: c.tk, bars: packBars(c.bars) });
     });
   }
@@ -168,7 +174,7 @@ export class CryptoMarket extends EventEmitter {
   startSpotStream() {
     const all = [...this.coins.values()];
     const whaleCoins = all.slice(0, this.config.whaleSpotCoins).map((c) => c.pair.toLowerCase());
-    const streams = [...all.map((c) => `${c.pair.toLowerCase()}@miniTicker`), ...whaleCoins.map((p) => `${p}@aggTrade`)];
+    const streams = [...all.flatMap((c) => [`${c.pair.toLowerCase()}@miniTicker`,`${c.pair.toLowerCase()}@kline_1d`]), ...whaleCoins.map((p) => `${p}@aggTrade`)];
     const byPair = new Map(all.map((c) => [c.pair, c]));
     let retry = 0;
 
@@ -184,6 +190,7 @@ export class CryptoMarket extends EventEmitter {
         const c = byPair.get(d.s);
         if (!c) return;
         if (d.e === "24hrMiniTicker") this.applyPrice(c, +d.c, d.E);
+        else if (d.e === "kline") this.applyCandle(c,d.k,d.E);
         else if (d.e === "aggTrade") {
           const usd = +d.p * +d.q;
           if (usd >= this.whaleMin(c.tk)) this.addWhale({ kind: "trade", sym: c.tk, side: d.m ? "sell" : "buy", usd, price: +d.p, ts: d.T, venue: "Binance spot" });
@@ -220,6 +227,14 @@ export class CryptoMarket extends EventEmitter {
     c.quote = { price, ts: ts || Date.now(), session: "open" };
     this.status.lastQuoteAt = Date.now();
     this.dirty.add(c.tk);
+  }
+
+  applyCandle(c,k,ts){
+    if(!k || ![+k.o,+k.h,+k.l,+k.c].every(v=>Number.isFinite(v)&&v>0))return;
+    const bar={d:new Date(k.t).toISOString().slice(0,10),o:+k.o,h:+k.h,l:+k.l,c:+k.c,v:+k.q||0};
+    const last=c.bars.at(-1);if(!last)return;
+    if(bar.d===last.d)Object.assign(last,bar);else if(bar.d>last.d)c.bars.push(bar);else return;
+    c.quote={price:bar.c,ts:ts||Date.now(),session:"open"};this.status.lastQuoteAt=Date.now();this.dirty.add(c.tk);
   }
 
   /* ---------------------------- derivatives ---------------------------- */
@@ -262,7 +277,7 @@ export class CryptoMarket extends EventEmitter {
       const by = new Map(rows.map((r) => [r.symbol, r]));
       for (const c of this.coins.values()) {
         const r = this.bybitSyms?.[c.tk] && by.get(this.bybitSyms[c.tk]);
-        if (r) Object.assign(c.deriv, { funding: r.funding, nextFunding: r.nextFunding, oiUsd: c.deriv.oiUsd ?? r.oiUsd });
+        if (r) Object.assign(c.deriv, { funding: r.funding, nextFunding: r.nextFunding, oiUsd: r.oiUsd });
       }
       this.status.derivatives.source = "Bybit (Binance futures unavailable)";
     }
@@ -356,7 +371,7 @@ export class CryptoMarket extends EventEmitter {
       status: this.status,
       coins: [...this.coins.values()].map((c) => ({
         tk: c.tk, name: c.name, sector: c.sector, themes: c.themes, source: c.source, quote: c.quote, cgId: c.cgId, pair: c.pair,
-        ...this.meta(c), bars: packBars(c.bars),
+        ...this.meta(c), historyStale:!!c.historyStale, historyUpdatedAt:c.histAt, bars: packBars(c.bars),
       })),
       deriv: this.derivPayload(),
       liqSince: this.liqs[0]?.ts || Date.now(),

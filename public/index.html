@@ -42,9 +42,10 @@
 
   <div class="main">
     <header class="top">
+      <div class="dashboard-navigation"><button class="iconbtn" data-act="back" aria-label="Back" title="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14 6-6 6 6 6"/></svg></button><button class="btn home-button" data-act="home" aria-label="Home dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 11 9-8 9 8M5 10v10h14V10M10 20v-7h4v7"/></svg><span>Home</span></button></div>
       <button class="cmdk" data-act="palette" aria-label="Search tickers and commands">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        Search tickers, views, commands<kbd>⌘K</kbd>
+        <span class="search-prompt">Search tickers, views, commands</span><kbd>⌘K</kbd>
       </button>
       <div class="seg mkseg" id="mkSwitch" role="group" aria-label="Market"><button data-act="market" data-mk="stocks">Stocks</button><button data-act="market" data-mk="crypto">Crypto</button></div>
       <div class="sp"></div>
@@ -57,6 +58,11 @@
     <div class="tape"><div class="tape-track" id="tape"></div></div>
 
     <div class="content" id="content">
+      <div id="dataQuality" class="data-quality" role="status"></div>
+      <section class="market-context card" aria-label="Dollar index and Bitcoin dominance">
+        <div class="market-context-heading"><span class="ct">Market context</span><span class="mut">Auto-updating feed · source delays may apply</span></div>
+        <div id="macroFeed" class="macro-feed"></div>
+      </section>
       <!-- OVERVIEW -->
       <section class="view" id="v-overview" hidden>
         <div class="head">
@@ -228,7 +234,7 @@
 <datalist id="tkdl"></datalist>
 <div class="tip" id="tip" hidden></div>
 <div class="scrim" id="scrim" hidden></div>
-<aside class="drawer" id="drawer" aria-label="Stock details"></aside>
+<aside class="drawer" id="drawer" aria-label="Stock details" aria-hidden="true" inert></aside>
 <div class="modal pal" id="pal" hidden role="dialog" aria-label="Command palette">
   <div class="mh"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--gold)"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="palQ" placeholder="Type a ticker, view or command…" autocomplete="off" aria-label="Search"><kbd>Esc</kbd></div>
   <div class="res" id="palRes"></div>

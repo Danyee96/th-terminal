@@ -11,7 +11,8 @@ function summary(s) {
     ticker: s.tk, name: s.name, sector: s.sector, themes: s.themes, source: s.source,
     price: r4(s.price), date: s.bars.at(-1).d,
     change: { d1: r4(s.chg), w1: r4(s.chgW), m1: r4(s.chgM), m3: r4(s.chg3M) },
-    marketCapB: r4(s.capNow),
+    marketCapB: s.capNow>0?r4(s.capNow):null,
+    dataQuality: { historyStale: !!s.historyStale, historyUpdatedAt: s.histAt || null, quoteTimestamp: s.quote?.ts || null, indicatorFormulas: "prototype" },
     hci: { value: r4(s.h), label: hciLabel(s.h) },
     hillZone: {
       status: s.zone.status,

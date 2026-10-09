@@ -15,7 +15,7 @@ export function createTemplateProvider({ apiKey } = {}) {
   return {
     id: "template",
     label: "My data provider",
-    mode: "polling", // "polling" | "streaming" | "simulated"
+    mode: "polling", // "polling" | "streaming"
 
     /** Daily bars, oldest first: [{ d: "YYYY-MM-DD", o, h, l, c, v }] */
     async history(sym, { years = 2 } = {}) {

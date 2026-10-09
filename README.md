@@ -30,7 +30,6 @@ Open **http://localhost:3000**. The first start downloads about 2 years of daily
 | Command | What it does |
 |---|---|
 | `npm run dev` | Development server with auto-restart, using live Nasdaq data |
-| `npm run dev:sim` | Same, but with simulated prices (works offline) |
 | `npm start` | Production start |
 | `npm run clear-cache` | Delete cached history so it downloads fresh on the next start |
 
@@ -48,9 +47,8 @@ Open **http://localhost:3000**. The first start downloads about 2 years of daily
 |---|---|---|---|
 | **Nasdaq public API** (default) | No | Daily history (2 yrs), live last-sale quotes polled every 15 s, market caps | The API behind nasdaq.com. Free and unofficial, so it can change or rate-limit without notice. |
 | **Finnhub** (optional) | Free key | Real-time trade stream (WebSocket), up to 50 symbols on the free plan | Add `FINNHUB_API_KEY` to `.env`. The largest 50 stocks stream; the rest keep polling. |
-| **Simulated** | No | Random prices for offline work | `DATA_PROVIDER=simulated` |
 
-If history for one stock can't be downloaded, that stock falls back to simulated prices. It shows a **SIM** badge in the screener and is listed in `/api/status` under `fallbacks`.
+If history cannot be downloaded, the server retains previously fetched real candles and marks them stale. Without real history the instrument is excluded and listed under `unavailable` in `/api/status`. No random candles or hardcoded valuations are substituted.
 
 **Before charging users:** redistributing exchange data to paying customers needs a licensed feed. Good options are Polygon.io, Alpaca, Finnhub's paid plans, and Twelve Data. Each can be added as a provider (see below) without touching the UI.
 
@@ -86,7 +84,6 @@ Today's candle only updates during the regular session (9:30–16:00 ET). Before
    const PROVIDERS = {
      nasdaq: () => createNasdaqProvider(),
      polygon: (cfg) => createPolygonProvider({ apiKey: process.env.POLYGON_API_KEY }),
-     simulated: () => createSimulatedProvider(),
    };
    ```
 3. Add the key to `.env` and set `DATA_PROVIDER=polygon`.
@@ -111,7 +108,7 @@ Keep the return shapes the same and the rest of the app follows. The thresholds 
 | Endpoint | Returns |
 |---|---|
 | `GET /api/health` | `{ ok: true }` |
-| `GET /api/status` | Data source, market session, last quote time, load progress, fallbacks |
+| `GET /api/status` | Data source, market session, last quote time, load progress, unavailable instruments |
 | `GET /api/stocks` | Every stock with its toolkit readings |
 | `GET /api/stocks/:ticker` | One stock, plus daily bars and the HCI series |
 | `GET /api/screener` | Filtered list. Query: `signals=os,bz` · `group=AI` · `hciMin` · `hciMax` · `sort=hci\|change\|marketCap` · `dir=asc\|desc` · `limit` |
@@ -142,7 +139,7 @@ th-terminal/
 │  ├─ routes/crypto.js     Crypto REST endpoints
 │  ├─ services/market.js   Stocks: history cache, quote polling, live candles
 │  ├─ services/crypto.js   Crypto: Binance stream, derivatives, whales, research feeds
-│  ├─ providers/           Stock sources: nasdaq, finnhub, simulated, _template
+│  ├─ providers/           Stock sources: nasdaq, finnhub, _template
 │  │  └─ crypto/           Crypto sources: binance, bybit, coingecko, research
 │  ├─ shared/indicators.js Toolkit indicators (server + browser)
 │  └─ lib/                 HTTP helpers and logger
@@ -207,7 +204,7 @@ Passwords are stored as salted scrypt hashes; sessions use random tokens in Http
 
 User accounts, sessions and API settings persist in `data/auth/store.json` (override the directory with `AUTH_DATA_DIR`). Keep this directory on persistent storage when hosting and restrict access to backups: saved provider keys are stored here. This file store is intended for one server instance; multiple replicas require shared transactional storage.
 
-The admin panel supports Nasdaq/simulated stock provider selection, polling intervals, Finnhub keys and CoinGecko Demo keys. Saved settings override `.env` and apply on the next server restart. Adding a different provider requires implementing its adapter. The terminal remains powered by Binance/Bybit for crypto.
+The admin panel supports Nasdaq stock provider selection, polling intervals, Finnhub keys and CoinGecko Demo keys. Saved settings override `.env` and apply on the next server restart. Adding a different provider requires implementing its adapter. The terminal remains powered by Binance/Bybit for crypto.
 
 Run `npm test` to verify authentication, market permissions, user management, expiry, session revocation, provider settings and persistence.
 
@@ -216,3 +213,17 @@ When HTTPS is terminated by one trusted reverse proxy, set `TRUST_PROXY=1` so se
 If incoming WebSockets are unavailable on the host, the browser uses authenticated HTTP snapshots every 10 seconds and displays “feed · polling”. WebSocket reconnection continues in the background.
 
 The login screen temporarily offers four testing-account autofill buttons. The server verifies the configured `TEST_ACCOUNT_PASSWORD` (or the original default) against each test account before offering credentials, so live deployments use their configured initial password. Accounts with changed passwords are unavailable. Set `TEST_LOGIN_BUTTONS=false` to remove these public credential shortcuts when testing ends.
+
+## Dollar Index and Bitcoin dominance feed
+
+The terminal now includes an auto-updating TradingView ticker above the dashboards. Dollar Index uses `CAPITALCOM:DXY`, explicitly labelled as a CFD quote; the free widget does not provide the ICE DXY cash-index quote. BTC dominance uses `CRYPTOCAP:BTC.D` and appears for accounts with crypto access. Values and daily changes update directly from the widget's provider, independently of the application's WebSocket/HTTP transport. Source delays and exchange hours still apply. This embedded feed is for display and does not feed the TH indicator engine or alert conditions.
+
+CoinGecko BTC dominance remains available in the crypto overview's global market card, refreshed every five minutes. CoinGecko and TradingView use different market coverage and may report different dominance figures. If the widget cannot load, the market-data link remains available; third-party scripts must be permitted by the browser.
+
+## Data integrity and mobile navigation
+
+Home opens the current market dashboard for single-market users and superadmins, or the market picker for full-access users. Back returns to the previous view or closes an open detail panel. Both controls remain visible on phones.
+
+Only real provider data is served. Invalid candles are rejected; unavailable instruments and stale cached histories are identified. Nasdaq quote timestamps preserve their actual exchange time, older quotes cannot overwrite newer trades, and no market-cap estimates are seeded. Binance daily kline streams provide official OHLCV updates alongside its live ticker stream. Crypto return periods use 7/30/90 calendar days; stock periods use 5/21/63 sessions. Crypto candle precision is preserved to twelve decimal places. Alerts are skipped when price timestamps are stale or history refreshes have failed.
+
+The TH formulas remain documented prototypes. Real price data does not prove signal reliability. Matching the original toolkit requires its official formulas; evaluating predictive accuracy requires a defined signal/backtest protocol with historical outcomes. There is no claim of validated trading accuracy. Data-source delay and regional availability still apply.

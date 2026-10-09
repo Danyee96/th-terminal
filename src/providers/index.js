@@ -1,10 +1,8 @@
 import { createNasdaqProvider } from "./nasdaq.js";
-import { createSimulatedProvider } from "./simulated.js";
 
 /** Add new providers here, keyed by the DATA_PROVIDER value that selects them. */
 const PROVIDERS = {
   nasdaq: () => createNasdaqProvider(),
-  simulated: () => createSimulatedProvider(),
 };
 
 export function createProvider(config, log) {
