@@ -91,14 +91,13 @@ for(const m of Object.values(MARKETS))m.by=Object.fromEntries(m.items.map(s=>[s.
 let macroMarket=null;
 function renderMacroFeed(){if(macroMarket===MK)return;macroMarket=MK;
   const box=$("macroFeed");box.replaceChildren();
-  const container=document.createElement("div");container.className="tradingview-widget-container";
-  const widget=document.createElement("div");widget.className="tradingview-widget-container__widget";container.append(widget);
-  const credit=document.createElement("div");credit.className="tradingview-widget-copyright";credit.innerHTML='<a href="https://www.tradingview.com/markets/" rel="noopener nofollow" target="_blank">Market data</a><span> by TradingView</span>';container.append(credit);
-  const symbols=[{proName:"CAPITALCOM:DXY",title:"Dollar Index · CFD"}];if(SESSION.markets.includes("crypto"))symbols.push({proName:"CRYPTOCAP:BTC.D",title:"BTC dominance"});
-  const script=document.createElement("script");script.src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";script.async=true;script.textContent=JSON.stringify({symbols,colorTheme:"dark",locale:"en",isTransparent:false,showSymbolLogo:true,displayMode:"regular",largeChartUrl:""});
-  script.onerror=()=>{widget.textContent="Market feed is unavailable. Open TradingView to check the latest readings.";};container.append(script);box.append(container);
-  const note=document.createElement("p");note.className="macro-source-note";note.textContent="Dollar Index: Capital.com CFD quote"+(SESSION.markets.includes("crypto")?" · BTC dominance: TradingView market-cap index":"")+". Quotes update automatically when the source publishes data.";box.append(note);
+  box.title="Dollar Index: Capital.com CFD quote. BTC dominance: TradingView market-cap index. Quotes update when their sources publish data; delays may apply.";
+  const widget=document.createElement("tv-ticker-tape");
+  const symbols=["CAPITALCOM:DXY"];if(SESSION.markets.includes("crypto"))symbols.push("CRYPTOCAP:BTC.D");
+  widget.setAttribute("symbols",symbols.join(","));widget.setAttribute("hide-chart","true");widget.setAttribute("item-size","compact");widget.setAttribute("theme","dark");widget.style.colorScheme="dark";box.append(widget);
+  if(!document.getElementById("macroWidgetScript")){const script=document.createElement("script");script.id="macroWidgetScript";script.type="module";script.src="https://widgets.tradingview-widget.com/w/en/tv-ticker-tape.js";script.onerror=()=>{box.innerHTML='<span class="mut">Market feed unavailable. <a href="https://www.tradingview.com/markets/" target="_blank" rel="noopener">View market data</a></span>';};document.head.append(script);}
 }
+
 function setMarket(mk){MK=mk;S.mk=mk;const m=MARKETS[mk];ASSETS=m.items;BY=m.by;SECTORS=m.sectors;THEMES=m.themes;STATUS=m.status;renderMacroFeed()}
 setMarket(MARKETS[store.get("market","stocks")]?store.get("market","stocks"):Object.keys(MARKETS)[0]);
 const recomputeAll=()=>Object.values(MARKETS).forEach(m=>m.items.forEach(calc));
@@ -308,7 +307,7 @@ function renderMap(){
     const st=s.setup;return st.side==="flat"?HEX.card3:mix(HEX.card3,st.side==="bull"?HEX.green:HEX.red,st.score/5)};
   const val=s=>M.mode==="fund"?fmtFund(s.deriv?.funding):M.mode==="chg"?fmtPct(per(s)):M.mode==="hci"?fmtH(s.h):M.mode==="zone"?(s.zone.status==="neutral"?"neutral":s.zone.status):(s.setup.side==="flat"?"flat":`${s.setup.side} ${s.setup.score}/5`);
   const secs=M.focus?[M.focus]:SECTORS;
-  const root=d3.hierarchy({children:secs.map(n=>({name:n,children:ASSETS.filter(s=>s.sector===n).map(s=>({s}))}))}).sum(d=>d.s?(M.size==="eq"?1:Math.pow(d.Math.max(s.capNow,1),.68)):0).sort((a,b)=>b.value-a.value);
+  const root=d3.hierarchy({children:secs.map(n=>({name:n,children:ASSETS.filter(s=>s.sector===n).map(s=>({s}))}))}).sum(d=>d.s?(M.size==="eq"?1:Math.pow(Math.max(d.s.capNow,1),.68)):0).sort((a,b)=>b.value-a.value);
   d3.treemap().size([W,H]).paddingOuter(3).paddingTop(22).paddingInner(2).tile(d3.treemapSquarify.ratio(1.15))(root);
   let html="";
   for(const sc of root.children){html+=`<button class="sec" data-act="map-focus" data-v="${M.focus?"":sc.data.name}" style="left:${sc.x0}px;top:${sc.y0+2}px;width:${sc.x1-sc.x0}px">${sc.data.name}${M.focus?"":" ›"}</button>`;
