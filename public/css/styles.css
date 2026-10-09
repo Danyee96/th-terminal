@@ -499,3 +499,5 @@ body:has(.scrim:not([hidden])) .dashboard-navigation{position:relative;z-index:8
 @media(max-width:860px){.top{align-items:center}.top .dashboard-navigation{order:0}.top .cmdk{order:1;min-height:40px;flex:1;white-space:nowrap;max-width:none}.top .cmdk .search-prompt,.top .cmdk kbd{display:none}.top .cmdk::after{content:"Search";font-size:12px}.top .sp{display:none}.top .mkt{order:2;flex-basis:100%;font-size:10px;min-height:22px}.top .mkseg{order:3}.top>.live,.top>.iconbtn{order:4}}
 
 .market-context{padding:10px 14px!important;margin-bottom:14px}.market-context-heading{margin-bottom:5px}.macro-feed{min-height:44px}.macro-feed tv-ticker-tape{display:block;width:100%;color-scheme:dark}.market-context-heading>.mut{font-size:9px}@media(max-width:620px){.market-context-heading{flex-direction:row;align-items:center;gap:8px}.market-context-heading .ct{font-size:9px}.market-context{padding:9px 10px!important}}
+
+.pattern-reading{padding:10px 0;border-bottom:1px solid var(--line)}.pattern-reading .row{gap:6px;justify-content:space-between}.pattern-reading b{font-size:12px}.pattern-note{font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:0}

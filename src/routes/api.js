@@ -21,6 +21,7 @@ function summary(s) {
     },
     divergence: s.div ? s.div.type : null,
     goldenZone: { direction: s.golden.dir, top: r4(s.golden.top), bottom: r4(s.golden.bot), inZone: s.golden.inZone },
+    patterns: s.patterns,
     confluence: s.setup,
     above50dma: s.above50,
     quote: s.quote,

@@ -33,7 +33,7 @@ function hciHue(h){const stops=[[-5,HEX.green],[-2.2,HEX.lime],[0,HEX.gold],[2.2
 const CFG0={hi:3,lo:-3,prox:1.5,tol:1.5,sound:false,density:"comfy"};
 const CFG={...CFG0,...store.get("cfg",{})};
 const mkScr=sel=>({group:"All",sig:new Set(),q:"",hmin:-5,hmax:5,cap:0,sort:"cap",dir:-1,sel,list:[]});
-const mkChart=tk=>({tk,tf:"D",type:"candle",ov:{zones:true,golden:true,heat:true,div:true,fib:false,sma20:false,sma50:true},v:null,hover:null});
+const mkChart=tk=>({tk,tf:"D",type:"candle",ov:{patterns:true,zones:true,golden:true,heat:true,div:true,fib:false,sma20:false,sma50:true},v:null,hover:null});
 function migrateLists(ls){ls=ls||[{id:1,name:"Core watchlist",tks:["NVDA","AAPL","MSFT","TSLA","JPM","XOM"]},{id:2,name:"AI leaders",tks:["NVDA","AVGO","AMD","PLTR","META","GOOGL"]}];
   ls.forEach(l=>l.mk||="stocks");
   if(!ls.some(l=>l.mk==="crypto"))ls.push({id:101,name:"Crypto majors",mk:"crypto",tks:["BTC","ETH","SOL","XRP","BNB","DOGE"]},{id:102,name:"AI & DeFi coins",mk:"crypto",tks:["TAO","RENDER","FET","NEAR","AAVE","UNI","ENA"]});
@@ -397,7 +397,7 @@ function enterChart(){const C=S.chart;if(!BY[C.tk])C.tk=ASSETS[0].tk;if(!C.v)res
   $("chTf").innerHTML=[["D","Daily"],["W","Weekly"]].map(([k,l])=>`<button data-act="ch-tf" data-v="${k}" aria-pressed="${C.tf===k}">${l}</button>`).join("");
   $("chRange").innerHTML=(C.tf==="D"&&MK==="crypto"?[["3M",90],["6M",180],["1Y",365],["2Y",730]]:RANGES[C.tf]).map(([l,n])=>`<button data-act="ch-range" data-v="${n}" aria-pressed="${Math.round(C.v.count)===n}">${l}</button>`).join("");
   $("chType").innerHTML=[["candle","Candles"],["line","Line"]].map(([k,l])=>`<button data-act="ch-type" data-v="${k}" aria-pressed="${C.type===k}">${l}</button>`).join("");
-  const OV=[["zones","Hill Zones",HEX.green],["golden","Golden Zone",HEX.gold],["heat","HCI Heatmap",HEX.orange],["div","Divergence",HEX.red],["fib","Fib levels",HEX.gold2],["sma20","SMA 20","#7aa7ff"],["sma50","SMA 50","#b58cff"]];
+  const OV=[["patterns","Patterns",HEX.gold],["zones","Hill Zones",HEX.green],["golden","Golden Zone",HEX.gold],["heat","HCI Heatmap",HEX.orange],["div","Divergence",HEX.red],["fib","Fib levels",HEX.gold2],["sma20","SMA 20","#7aa7ff"],["sma50","SMA 50","#b58cff"]];
   $("chOv").innerHTML=OV.map(([k,l,c])=>`<button class="chip" style="--c:${c}" data-act="ch-ov" data-v="${k}" aria-pressed="${C.ov[k]}"><i></i>${l}</button>`).join("");
   refreshChart()}
 function refreshChart(){const s=BY[S.chart.tk];
@@ -408,9 +408,11 @@ function drawMain(){const C=S.chart,src=chartSrc();
   const i=chInfo?.idx??src.bars.length-1,b=src.bars[i],h=src.hci[i],d=src.dates[i];
   $("chRead").innerHTML=`<span><b>${d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}</b></span><span>O <b>${fmtP(b.o)}</b></span><span>H <b>${fmtP(b.h)}</b></span><span>L <b>${fmtP(b.l)}</b></span><span>C <b>${fmtP(b.c)}</b></span>
     <span>Chg <b class="${pc(b.c-b.o)}">${fmtPct((b.c/(src.bars[i-1]||b).c-1)*100)}</b></span><span>HCI <b style="color:${isNaN(h)?"":hciHue(h)}">${fmtH(h)}</b></span>${C.ov.sma50?`<span>SMA50 <b>${isNaN(src.sma50[i])?"—":fmtP(src.sma50[i])}</b></span>`:""}`}
+function patternCards(src){return `<div class="card"><div class="ct">Pattern recognition</div>${src.patterns?.length?src.patterns.map(p=>`<div class="pattern-reading"><div class="row"><b>${esc(p.name)}</b><span class="pill ${p.direction==='bull'?'buy':'sell'}">${p.status==='pending-close'?'Awaiting close':p.status==='confirmed'?'Price-confirmed':p.status}</span></div><dl class="kv"><dt>Breakout ${p.direction==='bull'?'above':'below'}</dt><dd>${fmtP(p.breakout)}</dd><dt>Invalidation zone</dt><dd>${fmtP(p.invalidation.low)}–${fmtP(p.invalidation.high)}</dd></dl></div>`).join(''):'<p class="mut">No qualifying pattern in the recent candles.</p>'}<p class="pattern-note">Rule-based candidates. Breakouts require a completed candle; the latest candle cannot confirm one. Invalidation is a price zone, not a guaranteed stop.</p></div>`}
 function renderChartSide(){const s=BY[S.chart.tk],src=chartSrc(),z=src.zone,g=src.golden,h=src.hci[src.hci.length-1],last=src.bars[src.bars.length-1].c,wl=activeList();
   const dist=l=>fmtPct((l/last-1)*100);
   $("chSide").innerHTML=`
+  ${patternCards(src)}
   <div class="card"><div class="ct">Hill Conviction Index · ${S.chart.tf==="W"?"weekly":"daily"}</div>
     <div class="vmeter"><div class="bar"><b style="top:${(5-h)*10}%"></b></div><div style="display:flex;flex-direction:column;justify-content:space-between;gap:10px">
       <div class="scale"><span class="dn">+5 too high</span><span>0</span><span class="up">−5 too low</span></div></div></div>
@@ -476,6 +478,12 @@ function drawChart(cv,src,o){
     g.beginPath();g.moveTo(X(d.a.i),Y(d.a.p));g.lineTo(X(d.b.i),Y(d.b.p));g.stroke();g.beginPath();g.moveTo(X(d.a.i),YH(d.a.h));g.lineTo(X(d.b.i),YH(d.b.h));g.stroke();
     for(const p of[d.a,d.b]){g.fillStyle=HEX.bg;g.lineWidth=2;g.beginPath();g.arc(X(p.i),Y(p.p),4.5,0,7);g.fill();g.stroke();g.beginPath();g.arc(X(p.i),YH(p.h),4,0,7);g.fill();g.stroke()}
     if(!K){g.fillStyle=c;g.textAlign="center";g.font=`600 10px "IBM Plex Mono",monospace`;g.fillText(d.type==="bull"?"BULLISH DIVERGENCE":"BEARISH DIVERGENCE",X(d.b.i),d.type==="bull"?Y(d.b.p)+18:Y(d.b.p)-16);g.font=`11px "IBM Plex Mono",monospace`}}
+  if(ov.patterns&&!K){g.save();g.beginPath();g.rect(pL,top,PW,pB-top);g.clip();for(const p of (src.patterns||[]).slice(0,3)){if(p.end<i0||p.start>i1)continue;
+    const color=p.direction==='bull'?HEX.green:HEX.red;g.strokeStyle=color;g.lineWidth=2;g.setLineDash([4,3]);g.beginPath();p.points.forEach((pt,i)=>i?g.lineTo(X(pt.i),Y(pt.p)):g.moveTo(X(pt.i),Y(pt.p)));g.stroke();g.setLineDash([]);
+    const x=Math.max(pL,X(p.start)),zone=p.invalidation;g.fillStyle=rgba(HEX.red,.12);g.fillRect(x,Y(zone.high),W-pR-x,Y(zone.low)-Y(zone.high));
+    g.strokeStyle=HEX.gold;g.setLineDash([5,4]);g.beginPath();g.moveTo(x,Y(p.breakout));g.lineTo(W-pR,Y(p.breakout));g.stroke();g.setLineDash([]);
+    g.fillStyle=color;g.font='600 10px "IBM Plex Mono",monospace';g.textAlign='left';g.fillText(p.name+' · '+p.status,x+4,clamp(Y(p.breakout)-9,top+10,pB-10));
+  }g.restore();}
   // HCI pane
   g.fillStyle=rgba(HEX.red,.09);g.fillRect(pL,YH(5),PW,YH(CFG.hi)-YH(5));g.fillStyle=rgba(HEX.green,.09);g.fillRect(pL,YH(CFG.lo),PW,YH(-5)-YH(CFG.lo));
   g.strokeStyle="rgba(255,255,255,.12)";g.setLineDash([3,4]);g.lineWidth=1;[0,CFG.hi,CFG.lo].forEach(v=>{g.beginPath();g.moveTo(pL,YH(v));g.lineTo(W-pR,YH(v));g.stroke()});g.setLineDash([]);
@@ -543,7 +551,7 @@ function renderDrawer(){const s=BY[S.drawer];if(!s)return;const z=s.zone,g=s.gol
       <div class="row"><a class="btn" href="${tvUrl(s)}" target="_blank" rel="noopener">Open on TradingView ↗</a><button class="btn ghost" data-act="screen-tk" data-tk="${s.tk}">Find in screener</button></div>
     </div>`;
   const ndb=$("drawer").querySelector(".db");if(ndb)ndb.scrollTop=sc;
-  drawChart($("dCv"),s,{start:s.bars.length-90,end:s.bars.length+2,compact:true,ov:{zones:true,golden:true,heat:true,div:true},type:"candle"})}
+  drawChart($("dCv"),s,{start:s.bars.length-90,end:s.bars.length+2,compact:true,ov:{patterns:true,zones:true,golden:true,heat:true,div:true},type:"candle"})}
 
 /* ---------- compare ---------- */
 const CMPC=[HEX.gold,"#63b3ff","#b38bff",HEX.text];

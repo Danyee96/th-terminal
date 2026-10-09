@@ -227,3 +227,11 @@ Home opens the current market dashboard for single-market users and superadmins,
 Only real provider data is served. Invalid candles are rejected; unavailable instruments and stale cached histories are identified. Nasdaq quote timestamps preserve their actual exchange time, older quotes cannot overwrite newer trades, and no market-cap estimates are seeded. Binance daily kline streams provide official OHLCV updates alongside its live ticker stream. Crypto return periods use 7/30/90 calendar days; stock periods use 5/21/63 sessions. Crypto candle precision is preserved to twelve decimal places. Alerts are skipped when price timestamps are stale or history refreshes have failed.
 
 The TH formulas remain documented prototypes. Real price data does not prove signal reliability. Matching the original toolkit requires its official formulas; evaluating predictive accuracy requires a defined signal/backtest protocol with historical outcomes. There is no claim of validated trading accuracy. Data-source delay and regional availability still apply.
+
+## Pattern recognition
+
+The Chart view has a Patterns overlay and a Pattern recognition card, available on daily and weekly stock/crypto charts. It detects heuristic double bottoms/tops, rounded cups with handles, and bull/bear flags using confirmed swing points, price geometry, and a volatility buffer. It displays forming, awaiting-close, price-confirmed and invalidated candidates, breakout levels and a 0.25-ATR invalidation band around structural support/resistance. Recent shapes are drawn on the chart; the overlay can be toggled off.
+
+The latest candle is conservatively excluded from confirmation to prevent unfinished bars from confirming a breakout. Detection is price-based and does not claim volume confirmation or predictive accuracy. Pattern recognition does not alter the existing TH confluence score, place trades, or prescribe position size. Invalidated candidates may disappear once the invalidation closes. Formulas need historical evaluation and visual review before relying on them; no success probability is assigned.
+
+REST stock and crypto summaries also include a `patterns` array. Tests exercise each pattern, incomplete-candle confirmation, invalidation and flat/malformed data.

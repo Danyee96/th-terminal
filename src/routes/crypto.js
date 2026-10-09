@@ -15,6 +15,7 @@ function summary(c, deriv) {
     hillZone: { status: c.zone.status, sellers: c.zone.sellers.map((z) => ({ level: r(z.level, 8), touches: z.touches })), buyers: c.zone.buyers.map((z) => ({ level: r(z.level, 8), touches: z.touches })) },
     divergence: c.div ? c.div.type : null,
     goldenZone: { direction: c.golden.dir, top: r(c.golden.top, 8), bottom: r(c.golden.bot, 8), inZone: c.golden.inZone },
+    patterns: c.patterns,
     confluence: c.setup,
     derivatives: { fundingRate: d.funding ?? null, openInterestUsd: d.oiUsd ?? null, oiChange24hPct: r(d.oiChg24h), oiChange7dPct: r(d.oiChg7d), longShort: d.ls ?? null, liquidations24h: d.liq },
   };

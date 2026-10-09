@@ -1,3 +1,4 @@
+import { detectPatterns } from "./patterns.js";
 /**
  * TH indicator engine — shared by the Node server and the browser.
  * The browser loads this exact file from /shared/indicators.js, so keep it
@@ -175,6 +176,7 @@ export function computeCore(o, cfg = DEFAULT_CFG) {
   o.zone = computeHillZones(b, pv, cfg);
   o.div = computeDivergence(b, pv, o.hci);
   o.golden = computeGoldenZone(b);
+  o.patterns = detectPatterns(b);
   return o;
 }
 
