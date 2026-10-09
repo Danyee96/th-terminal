@@ -798,7 +798,7 @@ function renderLanding(force){if(!force&&Date.now()-landingAt<2000)return;landin
     card.querySelectorAll(".mc-stats>div").forEach((d,i)=>{const[l,v,c,st]=stats[i];setText(d.children[0],l);const b=d.children[1];setText(b,v);setAttr(b,"class",c);setAttr(b,"style",st)});
     card.querySelectorAll(".mc-tickers>div").forEach((r,i)=>{const s=top[i];if(!s)return;const[tk,sp,px,ch]=r.children;
       setText(tk,s.tk);setHTML(sp,spark(s.spark,90,22));setText(px,fmtP(s.price));setText(ch,fmtPct(s.chg));setAttr(ch,"class",`mono ${pc(s.chg)}`)})}}
-function showLanding(){if(SESSION.role==="superadmin"){go("overview");return}closeAll();renderLanding(true);$("landing").hidden=false;setTimeout(()=>$("landCards").querySelector(".mcard")?.focus({preventScroll:true}),50)}
+function showLanding(){if(SESSION.role==="superadmin"||SESSION.markets.length===1){go("overview");return}closeAll();renderLanding(true);$("landing").hidden=false;setTimeout(()=>$("landCards").querySelector(".mcard")?.focus({preventScroll:true}),50)}
 function enterMarket(mk){$("landing").hidden=true;switchMarket(mk,"overview")}
 function switchMarket(mk,view){if(!MARKETS[mk])return;if(mk!==MK)closeAll();setMarket(mk);store.set("market",mk);
   renderNav();renderTape();renderBadges();renderSource();marketClock();renderCmpBar();
@@ -819,7 +819,7 @@ function buildPal(){const q=$("palQ").value.trim().toLowerCase();const items=[];
   tks.forEach(s=>items.push({g:MARKETS[MK].label,ic:s.tk.slice(0,3),l:`<b>${s.tk}</b> <span class="mut">${esc(s.name)}</span>`,r:`<span class="mono ${pc(s.chg)}">${fmtPct(s.chg)}</span> <span class="mono" style="color:${hciHue(s.h)}">${fmtH(s.h)}</span>`,run:sh=>sh?openChart(s.tk):openDrawer(s.tk)}));
   const other=MK==="stocks"?"crypto":"stocks";
   const cmds=[...viewsFor().map(([id,l],i)=>({g:"Go to",ic:String(i+1),l:l,run:()=>go(id)})),
-    ...(MARKETS[other]?[{g:"Markets",ic:"⇆",l:`Switch to ${MARKETS[other].label}`,run:()=>switchMarket(other)}]:[]),{g:"Markets",ic:"◫",l:"Choose market",run:showLanding},
+    ...(MARKETS[other]?[{g:"Markets",ic:"⇆",l:`Switch to ${MARKETS[other].label}`,run:()=>switchMarket(other)}]:[]),...(SESSION.markets.length>1&&SESSION.role!=="superadmin"?[{g:"Markets",ic:"◫",l:"Choose market",run:showLanding}]:[]),
     {g:"Commands",ic:"▶",l:S.live?"Pause live feed":"Resume live feed",run:()=>setLive(!S.live)},{g:"Commands",ic:"⚙",l:"Open settings",run:openSettings},
     {g:"Commands",ic:"?",l:"Keyboard shortcuts",run:openKeys},{g:"Commands",ic:"🔔",l:"Create an alert",run:()=>go("alerts")},
     {g:"Commands",ic:"⇄",l:"Compare selected stocks",run:openCompare},{g:"Commands",ic:"⎘",l:"Copy screener as CSV",run:copyCsv},
@@ -966,5 +966,5 @@ setInterval(async()=>{try{const r=await fetch("/api/auth/me");if(!r.ok){location
 $("whMin").addEventListener("change",e=>{S.wh.min=+e.target.value;renderWhales()});
 $("whCoin").addEventListener("change",e=>{S.wh.coin=e.target.value;renderWhales()});
 $("boot").hidden=true;
-if(SESSION.role!=="superadmin")showLanding();
-const h0=(location.hash||"").slice(1);go(VIEWS.some(v=>v[0]===h0)?h0:S.view);
+if(SESSION.role!=="superadmin"&&SESSION.markets.length>1)showLanding();
+const h0=(location.hash||"").slice(1);go(SESSION.markets.length===1?"overview":VIEWS.some(v=>v[0]===h0)?h0:S.view);
