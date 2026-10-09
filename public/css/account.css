@@ -10,3 +10,5 @@
 .user-dialog::backdrop{background:rgba(0,0,0,.7);backdrop-filter:blur(4px)}
 .dialog-heading h2{margin:0}.user-dialog #userError:empty{display:none}.user-dialog .form{grid-template-columns:1fr 1fr}.user-dialog .form>input[type=hidden]{display:none}.user-dialog .form>.notice,.user-dialog .form>.row,.user-dialog .form>.switch{grid-column:1/-1}
 @media(max-width:520px){.user-dialog{padding:18px}.user-dialog .form{grid-template-columns:1fr}}
+
+.test-accounts{border-top:1px solid var(--line2);padding-top:18px;margin-top:4px}.test-accounts-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px}.test-account-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}.test-account-button{padding:10px 8px;border:1px solid var(--line2);border-radius:9px;background:var(--card2);color:var(--text);font-size:12px}.test-account-button:hover,.test-account-button[aria-pressed=true]{border-color:rgba(245,197,66,.5);background:rgba(245,197,66,.08);color:var(--gold)}.test-account-button:disabled{opacity:.4;cursor:not-allowed}.test-accounts small{display:block;margin-top:10px;color:var(--muted);font-size:11px;line-height:1.5}

@@ -214,3 +214,5 @@ Run `npm test` to verify authentication, market permissions, user management, ex
 When HTTPS is terminated by one trusted reverse proxy, set `TRUST_PROXY=1` so secure session cookies and origin checks use the forwarded protocol. Preserve both `data/auth` and `data/cache` using persistent hosting storage or Docker volumes.
 
 If incoming WebSockets are unavailable on the host, the browser uses authenticated HTTP snapshots every 10 seconds and displays “feed · polling”. WebSocket reconnection continues in the background.
+
+The login screen temporarily offers four testing-account autofill buttons. The server verifies the configured `TEST_ACCOUNT_PASSWORD` (or the original default) against each test account before offering credentials, so live deployments use their configured initial password. Accounts with changed passwords are unavailable. Set `TEST_LOGIN_BUTTONS=false` to remove these public credential shortcuts when testing ends.

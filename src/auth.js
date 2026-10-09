@@ -26,6 +26,17 @@ export function createAuth({root,onSettings=()=>{}}) {
   const market=mk=>(req,res,next)=>requireUser(req,res,()=>{req.recheckAccess=callback=>market(mk)(req,res,callback);return allowed(req.user,mk)?next():res.status(403).json({error:`Your account does not include ${mk}.`,code:'MARKET_DENIED'});});
   const router=Router();
   router.use((req,res,next)=>{res.set('Cache-Control','no-store');if(!['GET','HEAD'].includes(req.method)){const origin=req.headers.origin;if(origin&&origin!==`${req.protocol}://${req.get('host')}`)return res.status(403).json({error:'Invalid request origin.'});if(!req.is('application/json'))return res.status(415).json({error:'JSON required.'});}next();});
+  // Temporary testing shortcut. Disable with TEST_LOGIN_BUTTONS=false before launch.
+  router.get('/auth/test-accounts',(_req,res)=>{
+    if(process.env.TEST_LOGIN_BUTTONS==='false')return res.status(404).json({error:'Test login shortcuts are disabled.'});
+    const candidates=[process.env.TEST_ACCOUNT_PASSWORD,'ThTerminal@123'].filter(Boolean);
+    const accounts=[['Superadmin','admin@thterminal.test','superadmin','full'],['Full access','full@thterminal.test','user','full'],['Stocks only','stocks@thterminal.test','user','stocks'],['Crypto only','crypto@thterminal.test','user','crypto']].map(([label,email,role,access])=>{
+      const u=db.users.find(u=>u.email===email&&u.role===role&&u.access===access);
+      const password=u&&active(u)?candidates.find(p=>verify(p,u.password)):undefined;
+      return {label,email,available:!!password,...(password?{password}:{})};
+    });
+    res.json({accounts});
+  });
   router.post('/auth/login',(req,res)=>{
     const now=Date.now();
     const {email,password}=req.body||{};const u=db.users.find(u=>u.email===String(email).trim().toLowerCase());
