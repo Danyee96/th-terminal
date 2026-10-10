@@ -501,3 +501,31 @@ body:has(.scrim:not([hidden])) .dashboard-navigation{position:relative;z-index:8
 .market-context{padding:10px 14px!important;margin-bottom:14px}.market-context-heading{margin-bottom:5px}.macro-feed{min-height:44px}.macro-feed tv-ticker-tape{display:block;width:100%;color-scheme:dark}.market-context-heading>.mut{font-size:9px}@media(max-width:620px){.market-context-heading{flex-direction:row;align-items:center;gap:8px}.market-context-heading .ct{font-size:9px}.market-context{padding:9px 10px!important}}
 
 .pattern-reading{padding:10px 0;border-bottom:1px solid var(--line)}.pattern-reading .row{gap:6px;justify-content:space-between}.pattern-reading b{font-size:12px}.pattern-note{font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:0}
+
+/* Phone dock: markets, navigation, then account actions — each on its own row. */
+@media(max-width:860px){
+  .side,.side:has(.sidebar-markets:not([hidden])){display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"markets" "navigation" "account";gap:5px;padding:7px 10px calc(7px + env(safe-area-inset-bottom,0px));}
+  .side .sidebar-markets{grid-area:markets;justify-self:start;margin:0;max-width:100%;}
+  .side .nav,.side:has(.sidebar-markets:not([hidden])) .nav{grid-area:navigation;width:100%;min-width:0;flex:none;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;}
+  .side .nav::-webkit-scrollbar{display:none;}
+  .side .nav button{min-width:65px;min-height:44px;flex:none;}
+  .side .side-foot:has(#accountMenu){grid-area:account;width:100%;margin:0;border-top:1px solid var(--line);padding-top:5px;}
+  #accountMenu .account-menu{width:100%;display:flex;flex-wrap:nowrap;justify-content:flex-end;align-items:center;gap:6px;border:0;}
+  #accountMenu .sidebar-profile{margin-right:auto;min-width:0;flex:1;overflow:hidden;}
+  #accountMenu .sidebar-identity{min-width:0;}#accountMenu .sidebar-identity strong{max-width:120px;}
+  #accountMenu .account-settings{width:auto;flex:none;}#accountMenu .logout-action{flex:none;}
+  #accountMenu .account-action{min-height:36px;padding:7px 9px;gap:6px;}
+  #accountMenu .account-settings-options{bottom:calc(100% + 6px);left:auto;right:0;}
+  .content{padding-bottom:calc(190px + env(safe-area-inset-bottom,0px));}
+  .macro-feed{position:relative;height:60px;min-height:60px}.macro-feed .macro-ticker-fit{position:absolute;top:0;left:0;transform:scale(.72);transform-origin:top left;width:138.888889%;}
+}
+@media(max-width:400px){.macro-feed .macro-ticker-fit{transform:scale(.65);width:153.846154%;}}
+
+@media(max-width:860px){
+  .side .sidebar-markets{justify-self:stretch;width:100%;max-width:none;grid-template-columns:repeat(2,minmax(0,1fr));}
+  .side .sidebar-markets button{width:100%;min-height:40px;}
+  .top .mkSwitch,.top #mkSwitch{width:100%;display:flex;}
+  .top #mkSwitch button{flex:1;min-height:40px;}
+}
+
+@media(max-width:860px){body:not(:has(.scrim:not([hidden]))) .app[data-view="overview"] .dashboard-navigation{display:none}}

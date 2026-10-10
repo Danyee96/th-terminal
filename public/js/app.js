@@ -94,7 +94,7 @@ function renderMacroFeed(){if(macroMarket===MK)return;macroMarket=MK;
   box.title="Dollar Index: Capital.com CFD quote. BTC dominance: TradingView market-cap index. Quotes update when their sources publish data; delays may apply.";
   const widget=document.createElement("tv-ticker-tape");
   const symbols=["CAPITALCOM:DXY"];if(SESSION.markets.includes("crypto"))symbols.push("CRYPTOCAP:BTC.D");
-  widget.setAttribute("symbols",symbols.join(","));widget.setAttribute("hide-chart","true");widget.setAttribute("item-size","compact");widget.setAttribute("theme","dark");widget.style.colorScheme="dark";box.append(widget);
+  widget.setAttribute("symbols",symbols.join(","));widget.setAttribute("hide-chart","true");widget.setAttribute("item-size","compact");widget.setAttribute("theme","dark");widget.style.colorScheme="dark";const fit=document.createElement("div");fit.className="macro-ticker-fit";fit.append(widget);box.append(fit);
   if(!document.getElementById("macroWidgetScript")){const script=document.createElement("script");script.id="macroWidgetScript";script.type="module";script.src="https://widgets.tradingview-widget.com/w/en/tv-ticker-tape.js";script.onerror=()=>{box.innerHTML='<span class="mut">Market feed unavailable. <a href="https://www.tradingview.com/markets/" target="_blank" rel="noopener">View market data</a></span>';};document.head.append(script);}
 }
 
@@ -182,7 +182,7 @@ function renderNav(){$("nav").innerHTML=viewsFor().filter(v=>!v[0].startsWith("a
   const sideMarkets=$("sidebarMarkets");sideMarkets.hidden=SESSION.role!=="superadmin";
   if(SESSION.role==="superadmin")sideMarkets.innerHTML=["stocks","crypto"].filter(mk=>MARKETS[mk]).map(mk=>`<button data-act="market" data-mk="${mk}" aria-pressed="${mk===MK&&!S.view.startsWith("admin-")}" title="${MARKETS[mk].label}" aria-label="${MARKETS[mk].label}"><span class="market-full">${MARKETS[mk].label}</span><span class="market-short" aria-hidden="true">${mk==="stocks"?"S":"C"}</span></button>`).join("");
   $("mkSwitch").hidden=SESSION.role==="superadmin"||Object.keys(MARKETS).length<2;$("mkSwitch").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mk===MK))}
-function go(v,record=true){if(!viewsFor().some(x=>x[0]===v))v="overview";if(record&&S.view!==v)viewHistory.push(S.view);S.view=v;store.set("view",v);if(v.startsWith("admin-")&&$("adminSettings"))$("adminSettings").open=true;$("sidebarMarkets").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mk===MK&&!v.startsWith("admin-")));
+function go(v,record=true){if(!viewsFor().some(x=>x[0]===v))v="overview";if(record&&S.view!==v)viewHistory.push(S.view);S.view=v;document.querySelector(".app").dataset.view=v;store.set("view",v);if(v.startsWith("admin-")&&$("adminSettings")&&matchMedia("(min-width:861px)").matches)$("adminSettings").open=true;$("sidebarMarkets").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mk===MK&&!v.startsWith("admin-")));
   for(const[id]of VIEWS){$("v-"+id).hidden=id!==v;$("nav-"+id)?.setAttribute("aria-current",id===v?"page":"false")}
   try{history.replaceState(null,"","#"+v)}catch{}
   $("content").scrollTop=0;hideTip();enter(v)}
@@ -892,7 +892,7 @@ document.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if
     case"feed-details":if(SESSION.role==="superadmin"){if(sidebarCollapsed)setSidebarCollapsed(false);sourceExpanded=!sourceExpanded;renderSource()}break;
     case"home":closeAll();viewHistory.length=0;if(SESSION.role!=="superadmin"&&SESSION.markets.length>1){showLanding();break}$("landing").hidden=true;go("overview",false);break;
     case"back":if(S.drawer||!$("pal").hidden||!$("setModal").hidden||!$("keyModal").hidden||!$("cmpModal").hidden){closeAll();break}$("landing").hidden=true;go(viewHistory.pop()||"overview",false);break;
-    case"view":closeAll();go(el.dataset.view);break;
+    case"view":closeAll();go(el.dataset.view);if(matchMedia("(max-width:860px)").matches&&$("adminSettings"))$("adminSettings").open=false;break;
     case"drawer":if(el.dataset.mk&&el.dataset.mk!==MK)switchMarket(el.dataset.mk);if(el.tagName==="TR"&&S.view==="screener")S.scr.sel=tk;closeModalsOnly();openDrawer(tk);break;
     case"enter":enterMarket(el.dataset.mk);break;
     case"market":switchMarket(el.dataset.mk,S.view.startsWith("admin-")?"overview":undefined);break;
